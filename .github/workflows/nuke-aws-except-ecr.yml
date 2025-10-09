@@ -1,0 +1,127 @@
+name: Nuke AWS (except ECR)
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "GitHub Environment to use."
+        type: string
+        default: infrastructure-khanghv2406
+        required: true
+      confirm:
+        description: "Type NUKE to confirm irreversible deletion (except ECR)"
+        required: true
+        default: ""
+
+env:
+  AWS_REGION: ${{ vars.AWS_REGION || 'us-east-1' }}
+
+permissions:
+  contents: read
+
+jobs:
+  nuke:
+    name: aws-nuke
+    runs-on: ubuntu-latest
+    if: ${{ github.event.inputs.confirm == 'NUKE' }}
+    environment:
+      name: ${{ inputs.environment }}
+    env:
+      AWS_REGION: ${{ vars.AWS_REGION || 'us-east-1' }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Verify AWS identity
+        shell: bash
+        run: |
+          aws sts get-caller-identity
+
+      - name: Get AWS Account ID
+        id: acct
+        shell: bash
+        run: |
+          echo "account_id=$(aws sts get-caller-identity --query Account --output text)" >> "$GITHUB_OUTPUT"
+
+      - name: Show account ID
+        shell: bash
+        run: |
+          echo 'Target Account: ${{ steps.acct.outputs.account_id }}'
+
+      - name: Install aws-nuke
+        shell: bash
+        run: |
+          set -euo pipefail
+          VERSION=3.58.0
+          # Try multiple possible asset URLs (ekristen primary, rebuy-de fallback)
+          URLS=(
+            "https://github.com/ekristen/aws-nuke/releases/download/v${VERSION}/aws-nuke-v${VERSION}-linux-amd64.tar.gz"
+            "https://github.com/ekristen/aws-nuke/releases/download/v${VERSION}/aws-nuke_${VERSION}_linux_amd64.tar.gz"
+            "https://github.com/ekristen/aws-nuke/releases/download/v${VERSION}/aws-nuke_${VERSION}_linux_x86_64.tar.gz"
+            "https://github.com/rebuy-de/aws-nuke/releases/download/v${VERSION}/aws-nuke-v${VERSION}-linux-amd64.tar.gz"
+          )
+          success=false
+          for URL in "${URLS[@]}"; do
+            echo "Attempting download: $URL"
+            if curl -fLsS -o aws-nuke.tgz "$URL"; then
+              success=true
+              break
+            fi
+          done
+          if [ "$success" != true ]; then
+            echo "::error::Failed to download aws-nuke v${VERSION} from all known URLs" >&2
+            exit 1
+          fi
+          tar -xzf aws-nuke.tgz
+          BIN=""
+          if [ -d "aws-nuke-v${VERSION}-linux-amd64" ] && [ -f "aws-nuke-v${VERSION}-linux-amd64/aws-nuke" ]; then
+            BIN="aws-nuke-v${VERSION}-linux-amd64/aws-nuke"
+          elif [ -f "aws-nuke-v${VERSION}-linux-amd64" ]; then
+            BIN="aws-nuke-v${VERSION}-linux-amd64"
+          elif [ -f "aws-nuke" ]; then
+            BIN="aws-nuke"
+          else
+            BIN=$(find . -maxdepth 2 -type f -name 'aws-nuke*linux-amd64*' -o -name 'aws-nuke' | head -n 1 || true)
+          fi
+          if [ -z "$BIN" ]; then
+            echo "::error::aws-nuke binary not found after extraction" >&2
+            ls -la
+            exit 1
+          fi
+          echo "Using binary: $BIN"
+          sudo mv "$BIN" /usr/local/bin/aws-nuke
+          sudo chmod +x /usr/local/bin/aws-nuke
+          /usr/local/bin/aws-nuke version
+
+      - name: Build final config (inject account ID)
+        id: buildcfg
+        shell: bash
+        run: |
+          BASE=Terraform/aws_nuke/nuke-config.yaml
+          FINAL=Terraform/aws_nuke/nuke-config.final.yaml
+          ACCOUNT_ID="${{ steps.acct.outputs.account_id }}"
+          cp "$BASE" "$FINAL"
+          {
+            echo "bypass-alias-check-accounts:";
+            echo "  - \"$ACCOUNT_ID\"";
+            echo "";
+            echo "accounts:";
+            echo "  \"$ACCOUNT_ID\": {}";
+          } >> "$FINAL"
+          echo '----- Final Config -----'
+          cat "$FINAL"
+
+      - name: Run aws-nuke (DESTRUCTIVE)
+        shell: bash
+        run: |
+          aws-nuke run --config Terraform/aws_nuke/nuke-config.final.yaml --no-dry-run --force --force-sleep 3 --no-alias-check --quiet
+
+      - name: Finished
+        run: echo "Nuke completed"
