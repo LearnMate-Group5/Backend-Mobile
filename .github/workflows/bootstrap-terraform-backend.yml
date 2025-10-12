@@ -6,7 +6,7 @@ on:
       environment:
         description: "GitHub Environment to use."
         type: string
-        default: infrastructure-khanghv2406
+        default: infrastructure-chooy5704
         required: true
 
 permissions:
@@ -84,5 +84,3 @@ jobs:
             -backend-config="dynamodb_table=${TABLE}" \
             -backend-config="encrypt=true" \
             -input=false
-
-

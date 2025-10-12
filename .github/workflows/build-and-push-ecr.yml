@@ -6,7 +6,7 @@ on:
       environment:
         description: "GitHub Environment to use."
         type: string
-        default: infrastructure-khanghv2406
+        default: infrastructure-chooy5704
         required: true
 
 # Top-level env falls back to repo vars if env vars are absent.
@@ -63,7 +63,7 @@ jobs:
     needs: discover-services
     if: ${{ needs.discover-services.outputs.services != '[]' }}
     environment:
-      name: ${{ inputs.environment }}   # use environment-level secrets/vars
+      name: ${{ inputs.environment }} # use environment-level secrets/vars
     strategy:
       matrix:
         service: ${{ fromJson(needs.discover-services.outputs.services) }}
@@ -83,8 +83,8 @@ jobs:
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}          # environment secret
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}  # environment secret
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }} # environment secret
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }} # environment secret
           aws-region: ${{ env.AWS_REGION }}
 
       - name: Login to Amazon ECR

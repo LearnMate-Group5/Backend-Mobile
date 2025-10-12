@@ -6,7 +6,7 @@ on:
       environment:
         description: "GitHub Environment to use"
         type: string
-        default: infrastructure-khanghv2406
+        default: infrastructure-chooy5704
         required: true
       terraform_action:
         description: "Terraform action to perform"
@@ -17,7 +17,7 @@ on:
 
 env:
   AWS_REGION: ${{ vars.AWS_REGION || 'us-east-1' }}
-  PROJECT_NAME: ${{ vars.PROJECT_NAME || 'vkev-infrastructure-khanghv2406' }}
+  PROJECT_NAME: ${{ vars.PROJECT_NAME || 'vkev-infrastructure-chooy5704' }}
 
 permissions:
   contents: read
@@ -31,7 +31,7 @@ jobs:
       name: ${{ inputs.environment }}
     env:
       AWS_REGION: ${{ vars.AWS_REGION || 'us-east-1' }}
-      PROJECT_NAME: ${{ vars.PROJECT_NAME || 'vkev-infrastructure-khanghv2406' }}
+      PROJECT_NAME: ${{ vars.PROJECT_NAME || 'vkev-infrastructure-chooy5704' }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -109,8 +109,8 @@ jobs:
       fail-fast: false
     env:
       AWS_REGION: ${{ vars.AWS_REGION || 'us-east-1' }}
-      PROJECT_NAME: ${{ vars.PROJECT_NAME || 'vkev-infrastructure-khanghv2406' }}
-      ECR_REPO_NAME: ${{ vars.ECR_REPO_NAME || format('{0}-{1}-ecr', vars.PROJECT_NAME || 'vkev-infrastructure-khanghv2406', inputs.environment) }}
+      PROJECT_NAME: ${{ vars.PROJECT_NAME || 'vkev-infrastructure-chooy5704' }}
+      ECR_REPO_NAME: ${{ vars.ECR_REPO_NAME || format('{0}-{1}-ecr', vars.PROJECT_NAME || 'vkev-infrastructure-chooy5704', inputs.environment) }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -180,7 +180,7 @@ jobs:
       name: ${{ inputs.environment }}
     env:
       AWS_REGION: ${{ vars.AWS_REGION || 'us-east-1' }}
-      PROJECT_NAME: ${{ vars.PROJECT_NAME || 'vkev-infrastructure-khanghv2406' }}
+      PROJECT_NAME: ${{ vars.PROJECT_NAME || 'vkev-infrastructure-chooy5704' }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -347,23 +347,23 @@ jobs:
           echo "**AWS Region**: ${{ env.AWS_REGION }}" >> $GITHUB_STEP_SUMMARY
           echo "**Project**: ${{ env.PROJECT_NAME }}" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          
+
           # Get ALB DNS name if available
           if terraform output -raw alb_dns_name 2>/dev/null; then
             ALB_DNS=$(terraform output -raw alb_dns_name)
             echo "**Application Load Balancer**: http://$ALB_DNS" >> $GITHUB_STEP_SUMMARY
           fi
-          
+
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### Services Deployed:" >> $GITHUB_STEP_SUMMARY
-          
+
           # List discovered microservices
           if [ "$DISCOVERED_SERVICES" != "[]" ] && [ -n "$DISCOVERED_SERVICES" ]; then
             echo "$DISCOVERED_SERVICES" | jq -r '.[]' | while read -r service; do
               echo "- $service" >> $GITHUB_STEP_SUMMARY
             done
           fi
-          
+
           # List additional services from TERRAFORM_VARS_* (non-microservice containers)
           echo "$SECRETS_JSON" | jq -r 'to_entries[] | select(.key | startswith("TERRAFORM_VARS_")) | .key' | while read -r key; do
             suffix=$(echo "$key" | sed 's/^TERRAFORM_VARS_//' | tr '[:upper:]' '[:lower:]')
@@ -377,7 +377,8 @@ jobs:
   deployment-summary:
     name: Deployment Summary
     runs-on: ubuntu-latest
-    needs: [bootstrap-backend, discover-services, build-and-push, terraform-deploy]
+    needs:
+      [bootstrap-backend, discover-services, build-and-push, terraform-deploy]
     if: always()
     environment:
       name: ${{ inputs.environment }}
@@ -398,17 +399,17 @@ jobs:
           echo "- **Build & Push ECR**: ${{ needs.build-and-push.result }}" >> $GITHUB_STEP_SUMMARY
           echo "- **Terraform Deploy**: ${{ needs.terraform-deploy.result }}" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          
+
           # Dynamic services count
           service_count=0
           if [ "$DISCOVERED_SERVICES" != "[]" ] && [ -n "$DISCOVERED_SERVICES" ]; then
             service_count=$(echo "$DISCOVERED_SERVICES" | jq 'length')
           fi
           terraform_vars_count=$(echo "$SECRETS_JSON" | jq -r 'to_entries[] | select(.key | startswith("TERRAFORM_VARS_")) | .key' | wc -l)
-          
+
           echo "**Services Configured**: $service_count microservices + $terraform_vars_count terraform configurations" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          
+
           if [ "${{ needs.terraform-deploy.result }}" == "success" ] && [ "${{ inputs.terraform_action }}" == "apply" ]; then
             echo "**Infrastructure successfully deployed!**" >> $GITHUB_STEP_SUMMARY
           elif [ "${{ inputs.terraform_action }}" == "destroy" ]; then
