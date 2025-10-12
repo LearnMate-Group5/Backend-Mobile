@@ -27,7 +27,7 @@ variable "subnet_id" {
 variable "instance_type" {
   description = "EC2 instance type for the container instance"
   type        = string
-  default     = "t3.small"
+  default     = "t2.small"
 }
 
 variable "root_volume_size" {
