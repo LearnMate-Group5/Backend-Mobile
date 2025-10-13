@@ -337,7 +337,7 @@ jobs:
 
       - name: Output Terraform results
         id: terraform_outputs
-        if: ${{ inputs.terraform_action == 'apply' }}
+        if: ${{ inputs.terraform_action != 'destroy' }}
         working-directory: Terraform
         env:
           DISCOVERED_SERVICES: ${{ needs.discover-services.outputs.services }}
