@@ -43,19 +43,6 @@ namespace Infrastructure.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "test",
-                columns: table => new
-                {
-                    testid = table.Column<int>(type: "integer", nullable: false)
-                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
-                    testattribute = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: true)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("test_pkey", x => x.testid);
-                });
-
-            migrationBuilder.CreateTable(
                 name: "guestrolemapping",
                 columns: table => new
                 {
@@ -103,9 +90,6 @@ namespace Infrastructure.Migrations
         {
             migrationBuilder.DropTable(
                 name: "guestrolemapping");
-
-            migrationBuilder.DropTable(
-                name: "test");
 
             migrationBuilder.DropTable(
                 name: "guest");

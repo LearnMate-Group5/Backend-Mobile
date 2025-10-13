@@ -12,7 +12,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Infrastructure.Migrations
 {
     [DbContext(typeof(MyDbContext))]
-    [Migration("20251009172521_Initial")]
+    [Migration("20250918063734_Initial")]
     partial class Initial
     {
         /// <inheritdoc />
@@ -116,26 +116,6 @@ namespace Infrastructure.Migrations
                     b.HasIndex("Roleid");
 
                     b.ToTable("guestrolemapping", (string)null);
-                });
-
-            modelBuilder.Entity("Domain.Entities.Test", b =>
-                {
-                    b.Property<int>("Testid")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer")
-                        .HasColumnName("testid");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Testid"));
-
-                    b.Property<string>("Testattribute")
-                        .HasMaxLength(200)
-                        .HasColumnType("character varying(200)")
-                        .HasColumnName("testattribute");
-
-                    b.HasKey("Testid")
-                        .HasName("test_pkey");
-
-                    b.ToTable("test", (string)null);
                 });
 
             modelBuilder.Entity("Domain.Entities.Guestrolemapping", b =>

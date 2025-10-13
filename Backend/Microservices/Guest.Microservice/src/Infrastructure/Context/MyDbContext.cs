@@ -22,8 +22,6 @@ public partial class MyDbContext : DbContext
 
     public virtual DbSet<Guestrolemapping> Guestrolemappings { get; set; }
 
-    public virtual DbSet<Test> Tests { get; set; }
-
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {
         if (!optionsBuilder.IsConfigured)
@@ -101,18 +99,6 @@ public partial class MyDbContext : DbContext
             entity.HasOne(d => d.Role).WithMany(p => p.Guestrolemappings)
                 .HasForeignKey(d => d.Roleid)
                 .HasConstraintName("guestrolemapping_roleid_fkey");
-        });
-
-        modelBuilder.Entity<Test>(entity =>
-        {
-            entity.HasKey(e => e.Testid).HasName("test_pkey");
-
-            entity.ToTable("test");
-
-            entity.Property(e => e.Testid).HasColumnName("testid");
-            entity.Property(e => e.Testattribute)
-                .HasMaxLength(200)
-                .HasColumnName("testattribute");
         });
 
         OnModelCreatingPartial(modelBuilder);

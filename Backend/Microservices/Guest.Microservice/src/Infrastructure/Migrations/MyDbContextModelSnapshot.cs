@@ -115,26 +115,6 @@ namespace Infrastructure.Migrations
                     b.ToTable("guestrolemapping", (string)null);
                 });
 
-            modelBuilder.Entity("Domain.Entities.Test", b =>
-                {
-                    b.Property<int>("Testid")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer")
-                        .HasColumnName("testid");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Testid"));
-
-                    b.Property<string>("Testattribute")
-                        .HasMaxLength(200)
-                        .HasColumnType("character varying(200)")
-                        .HasColumnName("testattribute");
-
-                    b.HasKey("Testid")
-                        .HasName("test_pkey");
-
-                    b.ToTable("test", (string)null);
-                });
-
             modelBuilder.Entity("Domain.Entities.Guestrolemapping", b =>
                 {
                     b.HasOne("Domain.Entities.Guest", "Guest")
