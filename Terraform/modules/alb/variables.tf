@@ -37,11 +37,23 @@ variable "target_groups_definition" {
 
 variable "default_listener_action" {
   description = "Definition of the default listener action for the ALB HTTP listener."
-  type        = map(any)
+  type = object({
+    type                = string
+    target_group_suffix = optional(string)
+    fixed_response = optional(object({
+      content_type = string
+      status_code  = string
+      message_body = optional(string)
+    }))
+  })
 }
 
 variable "listener_rules_definition" {
   description = "List of listener rule configurations applied to the ALB HTTP listener."
-  type        = list(map(any))
-  default     = []
+  type = list(object({
+    priority             = number
+    target_group_suffix  = string
+    conditions           = list(map(any))
+  }))
+  default = []
 }
