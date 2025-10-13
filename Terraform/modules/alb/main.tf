@@ -89,13 +89,11 @@ resource "aws_lb_listener" "http" {
       ) : null
 
     dynamic "fixed_response" {
-      for_each = var.default_listener_action.type == "fixed-response"
-        ? compact([try(var.default_listener_action.fixed_response, null)])
-        : []
+      for_each = var.default_listener_action.type == "fixed-response" ? compact([try(var.default_listener_action.fixed_response, null)]) : []
       content {
         content_type = fixed_response.value.content_type
-        message_body = lookup(fixed_response.value, "message_body", null)
         status_code  = fixed_response.value.status_code
+        message_body = lookup(fixed_response.value, "message_body", null)
       }
     }
   }
