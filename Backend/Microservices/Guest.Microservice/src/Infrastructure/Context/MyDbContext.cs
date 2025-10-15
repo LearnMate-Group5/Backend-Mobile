@@ -24,6 +24,8 @@ public partial class MyDbContext : DbContext
 
     public virtual DbSet<Test> Tests { get; set; }
 
+    public virtual DbSet<SetTest1> SetTest1s { get; set; }
+
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {
         if (!optionsBuilder.IsConfigured)
@@ -111,6 +113,18 @@ public partial class MyDbContext : DbContext
 
             entity.Property(e => e.Testid).HasColumnName("testid");
             entity.Property(e => e.Testattribute)
+                .HasMaxLength(200)
+                .HasColumnName("testattribute");
+        });
+
+        modelBuilder.Entity<SetTest1>(entity =>
+        {
+            entity.HasKey(e => e.SetTest1Id).HasName("settest1_pkey");
+
+            entity.ToTable("settest1");
+
+            entity.Property(e => e.SetTest1Id).HasColumnName("settest1id");
+            entity.Property(e => e.TestAttribute)
                 .HasMaxLength(200)
                 .HasColumnName("testattribute");
         });

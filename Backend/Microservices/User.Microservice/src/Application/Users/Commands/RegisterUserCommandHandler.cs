@@ -1,5 +1,5 @@
 using System;
-using System.Collections.Generic;
+using System.Linq;
 using SharedLibrary.Common.ResponseModel;
 using SharedLibrary.Abstractions.Messaging;
 using SharedLibrary.Abstractions.UnitOfWork;
@@ -42,10 +42,21 @@ namespace Application.Users.Commands
         }
         public async Task<Result> Handle(RegisterUserCommand command, CancellationToken cancellationToken)
         {
-            var user = _mapper.Map<User>(command);
+            var normalizedEmail = command.Email.Trim().ToLowerInvariant();
+            var existingUsers = await _userRepository.FindAsync(user => user.Email == normalizedEmail, cancellationToken)
+                                ?? Enumerable.Empty<User>();
+
+            if (existingUsers.Any())
+            {
+                return Result.Failure(new Error("User.EmailAlreadyExists", "Email is already registered."));
+            }
+
+            var user = _mapper.Map<User>(command) ?? new User { UserId = Guid.NewGuid() };
+            user.Email = normalizedEmail;
+            user.Name = command.Name.Trim();
             user.PasswordHash = _passwordHasher.HashPassword(command.Password);
             user.CreatedAt = DateTimeExtensions.PostgreSqlUtcNow;
-            user.IsVerified = false; // Người dùng mới đăng ký chưa được xác minh
+            user.IsVerified = false; // Newly registered users are not verified yet.
             
             // Find or create default "User" role
             var userRole = await _roleRepository.GetByNameAsync("User", cancellationToken);
@@ -66,15 +77,16 @@ namespace Application.Users.Commands
             var userRoleAssignment = new UserRole
             {
                 UserId = user.UserId,
-                RoleId = userRole.RoleId
+                RoleId = userRole.RoleId,
+                AssignedAt = DateTimeExtensions.PostgreSqlUtcNow
             };
             
             await _userRoleRepository.AddAsync(userRoleAssignment, cancellationToken);
             
-            await _publishEndpoint.Publish(new UserCreatingSagaStart{
-                CorrelationId= Guid.NewGuid(),
+            await _publishEndpoint.Publish(new UserCreatingSagaStart {
+                CorrelationId = Guid.NewGuid(),
                 Name = command.Name,
-                Email = command.Email
+                Email = normalizedEmail
             }, cancellationToken);
             return Result.Success();
         }
