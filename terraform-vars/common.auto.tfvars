@@ -1,5 +1,5 @@
 # Common Infrastructure Variables
-project_name = "vkev"
+project_name = "chooy"
 aws_region   = "us-east-1"
 region       = "us-east-1"
 
@@ -8,7 +8,7 @@ vpc_cidr            = "10.0.0.0/16"
 public_subnet_cidrs = ["10.0.1.0/24", "10.0.2.0/24"]
 private_subnet_cidr = "10.0.3.0/24"
 
-# EC2 Configuration     
+# EC2 Configuration
 instance_type       = "t3.micro"
 associate_public_ip = true
 

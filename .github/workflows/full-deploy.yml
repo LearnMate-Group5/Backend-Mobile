@@ -181,6 +181,8 @@ jobs:
     env:
       AWS_REGION: ${{ vars.AWS_REGION || 'us-east-1' }}
       PROJECT_NAME: ${{ vars.PROJECT_NAME || 'vkev-infrastructure-chooy5704' }}
+    outputs:
+      alb_dns_name: ${{ steps.terraform_outputs.outputs.alb_dns_name }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -334,7 +336,8 @@ jobs:
         run: terraform destroy -auto-approve
 
       - name: Output Terraform results
-        if: ${{ inputs.terraform_action == 'apply' }}
+        id: terraform_outputs
+        if: ${{ inputs.terraform_action != 'destroy' }}
         working-directory: Terraform
         env:
           DISCOVERED_SERVICES: ${{ needs.discover-services.outputs.services }}
@@ -349,8 +352,9 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
 
           # Get ALB DNS name if available
-          if terraform output -raw alb_dns_name 2>/dev/null; then
-            ALB_DNS=$(terraform output -raw alb_dns_name)
+          ALB_DNS=$(terraform output -raw alb_dns_name 2>/dev/null || true)
+          if [ -n "$ALB_DNS" ]; then
+            echo "alb_dns_name=$ALB_DNS" >> "$GITHUB_OUTPUT"
             echo "**Application Load Balancer**: http://$ALB_DNS" >> $GITHUB_STEP_SUMMARY
           fi
 
@@ -387,11 +391,16 @@ jobs:
         env:
           DISCOVERED_SERVICES: ${{ needs.discover-services.outputs.services }}
           SECRETS_JSON: ${{ toJson(secrets) }}
+          ALB_DNS_NAME: ${{ needs.terraform-deploy.outputs.alb_dns_name }}
         run: |
           echo "## Full Infrastructure Deployment Complete" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "**Environment**: ${{ inputs.environment }}" >> $GITHUB_STEP_SUMMARY
           echo "**Terraform Action**: ${{ inputs.terraform_action }}" >> $GITHUB_STEP_SUMMARY
+          if [ -n "$ALB_DNS_NAME" ]; then
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "**Application Load Balancer**: http://$ALB_DNS_NAME" >> $GITHUB_STEP_SUMMARY
+          fi
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### Job Results:" >> $GITHUB_STEP_SUMMARY
           echo "- **Bootstrap Backend**: ${{ needs.bootstrap-backend.result }}" >> $GITHUB_STEP_SUMMARY
