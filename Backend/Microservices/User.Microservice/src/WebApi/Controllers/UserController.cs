@@ -54,6 +54,24 @@ namespace WebApi.Controllers
             return Ok(result);
         }
 
+        [HttpPut("role")]
+        [Authorize("Admin")]
+        public async Task<IActionResult> UpdateRole([FromQuery] Guid userId, [FromQuery] string roleName, CancellationToken cancellationToken)
+        {
+            var command = new UpdateUserRoleCommand(userId, roleName);
+            var result = await _mediator.Send(command, cancellationToken);
+            if (result.IsFailure)
+            {
+                return HandleFailure(result);
+            }
+            var commit = await _mediator.Send(new SaveChangesCommand(), cancellationToken);
+            if (commit.IsFailure)
+            {
+                return HandleFailure(commit);
+            }
+            return Ok(result);
+        }
+
         [HttpPost("refresh-token")]
         [AllowAnonymous]
         public async Task<IActionResult> RefreshToken([FromBody] RefreshTokenCommand command, CancellationToken cancellationToken)
