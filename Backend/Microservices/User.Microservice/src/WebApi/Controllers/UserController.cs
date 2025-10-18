@@ -66,9 +66,29 @@ namespace WebApi.Controllers
             }
             var commit = await _mediator.Send(new SaveChangesCommand(), cancellationToken);
             if (commit.IsFailure)
+        {
+            return HandleFailure(commit);
+        }
+        return Ok(result);
+    }
+
+        [HttpPut("{userId:guid}/activation")]
+        [Authorize("Admin")]
+        public async Task<IActionResult> UpdateActivationStatus([FromRoute] Guid userId, [FromQuery] bool isActive, CancellationToken cancellationToken)
+        {
+            var command = new UpdateUserActivationStatusCommand(userId, isActive);
+            var result = await _mediator.Send(command, cancellationToken);
+            if (result.IsFailure)
+            {
+                return HandleFailure(result);
+            }
+
+            var commit = await _mediator.Send(new SaveChangesCommand(), cancellationToken);
+            if (commit.IsFailure)
             {
                 return HandleFailure(commit);
             }
+
             return Ok(result);
         }
 

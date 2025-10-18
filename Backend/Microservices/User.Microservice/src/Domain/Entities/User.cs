@@ -21,5 +21,7 @@ public partial class User
 
     public bool IsVerified { get; set; }
 
+    public bool IsActive { get; set; } = true;
+
     public virtual ICollection<UserRole> UserRoles { get; set; } = new List<UserRole>();
 }

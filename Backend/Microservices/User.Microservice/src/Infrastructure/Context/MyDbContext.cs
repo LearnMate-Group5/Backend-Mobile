@@ -102,7 +102,9 @@ public partial class MyDbContext : DbContext
             entity.Property(e => e.RefreshTokenExpiry)
                 .HasColumnType("timestamp with time zone")
                 .HasColumnName("refresh_token_expiry");
-
+            entity.Property(e => e.IsActive)
+                .HasDefaultValue(true)
+                .HasColumnName("is_active");
             entity.Property(e => e.IsVerified)
                 .HasDefaultValue(false)
                 .HasColumnName("is_verified");
