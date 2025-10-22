@@ -3,3 +3,4 @@
 .terraform.lock.hcl
 .vs/
 *.csproj.user
+out-test/
