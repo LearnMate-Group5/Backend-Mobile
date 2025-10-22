@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 using SharedLibrary.Utils;
 using SharedLibrary.Configs;
 using SharedLibrary.Common;
@@ -8,10 +9,12 @@ using Domain.Repositories;
 using Infrastructure.Repositories;
 using SharedLibrary.Abstractions.UnitOfWork;
 using Infrastructure.Common;
+using Infrastructure.Authentication;
 using MassTransit;
 using Application.Sagas;
 using Infrastructure.Context;
 using SharedLibrary.Adapters;
+using SharedLibrary.Authentication;
 
 namespace Infrastructure
 {
@@ -27,6 +30,7 @@ namespace Infrastructure
             services.AddScoped<IUnitOfWork, UnitOfWork>();
             services.AddScoped<ISaveChangesUnitOfWork, SaveChangesUnitOfWorkAdapter>();
             services.AddScoped(typeof(IRepository<>), typeof(Repository<>));
+            services.AddSingleton<IFirebaseTokenVerifier, FirebaseTokenVerifier>();
             services.AddSingleton<EnvironmentConfig>();
             var environment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT");
             using var serviceProvider = services.BuildServiceProvider();

@@ -12,6 +12,9 @@ using SharedLibrary.Configs;
 using SharedLibrary.Middleware;
 using SharedLibrary.Migrations;
 using SharedLibrary.Utils;
+using FirebaseAdmin;
+using Google.Apis.Auth.OAuth2;
+using System.IO;
 
 var solutionDirectory = Directory.GetParent(Directory.GetCurrentDirectory())?.FullName ?? "";
 if (solutionDirectory != null)
@@ -98,6 +101,38 @@ builder.Services.AddDbContext<MyDbContext>((serviceProvider, options) =>
 builder.Services
     .AddApplication()
     .AddInfrastructure();
+
+var firebaseCredentialsPath = builder.Configuration["Firebase:CredentialsPath"];
+if (!string.IsNullOrWhiteSpace(firebaseCredentialsPath))
+{
+    var absolutePath = Path.IsPathRooted(firebaseCredentialsPath)
+        ? firebaseCredentialsPath
+        : Path.GetFullPath(Path.Combine(builder.Environment.ContentRootPath, firebaseCredentialsPath));
+
+    try
+    {
+        if (!File.Exists(absolutePath))
+        {
+            Console.WriteLine($"[Firebase] Credential file not found at '{absolutePath}'. Firebase login will be disabled.");
+        }
+        else if (FirebaseApp.DefaultInstance == null)
+        {
+            FirebaseApp.Create(new AppOptions
+            {
+                Credential = GoogleCredential.FromFile(absolutePath)
+            });
+            Console.WriteLine("[Firebase] Admin SDK initialized using configured credentials file.");
+        }
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"[Firebase] Failed to initialize Firebase Admin SDK: {ex.Message}");
+    }
+}
+else
+{
+    Console.WriteLine("[Firebase] 'Firebase:CredentialsPath' is not configured. Firebase login will be disabled.");
+}
 
 var app = builder.Build();
 

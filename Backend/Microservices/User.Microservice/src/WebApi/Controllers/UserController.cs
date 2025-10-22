@@ -33,7 +33,27 @@ namespace WebApi.Controllers
             if (commit.IsFailure)
             {
                 return HandleFailure(commit);
+        }
+        return Ok(result);
+    }
+
+        [HttpPost("login/firebase")]
+        [AllowAnonymous]
+        public async Task<IActionResult> LoginWithFirebase([FromBody] LoginWithFirebaseRequest request, CancellationToken cancellationToken)
+        {
+            var command = new LoginWithFirebaseCommand(request.IdToken);
+            var result = await _mediator.Send(command, cancellationToken);
+            if (result.IsFailure)
+            {
+                return HandleFailure(result);
             }
+
+            var commit = await _mediator.Send(new SaveChangesCommand(), cancellationToken);
+            if (commit.IsFailure)
+            {
+                return HandleFailure(commit);
+            }
+
             return Ok(result);
         }
 
@@ -148,4 +168,5 @@ namespace WebApi.Controllers
     }
 
     public sealed record UpdateUserProfileRequest(string Name, string Email, string? AvatarUrl);
+    public sealed record LoginWithFirebaseRequest(string IdToken);
 }

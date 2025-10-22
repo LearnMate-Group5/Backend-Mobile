@@ -31,5 +31,7 @@ public partial class User
 
     public string? ProviderName { get; set; }
 
+    public string? ProviderUserId { get; set; }
+
     public virtual ICollection<UserRole> UserRoles { get; set; } = new List<UserRole>();
 }

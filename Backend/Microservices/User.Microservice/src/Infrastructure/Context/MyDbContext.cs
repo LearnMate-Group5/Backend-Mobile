@@ -107,6 +107,9 @@ public partial class MyDbContext : DbContext
             entity.Property(e => e.ProviderName)
                 .HasMaxLength(100)
                 .HasColumnName("provider_name");
+            entity.Property(e => e.ProviderUserId)
+                .HasMaxLength(100)
+                .HasColumnName("provider_user_id");
             entity.Property(e => e.RefreshToken)
                 .HasMaxLength(255)
                 .HasColumnName("refresh_token");

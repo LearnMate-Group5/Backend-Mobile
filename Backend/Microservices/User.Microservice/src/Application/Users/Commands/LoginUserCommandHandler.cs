@@ -44,7 +44,8 @@ public class LoginUserCommandHandler : IRequestHandler<LoginUserCommand, Result<
         }
 
         // Verify password
-        if (!_passwordHasher.VerifyPassword(request.Password, user.PasswordHash))
+        if (string.IsNullOrWhiteSpace(user.PasswordHash) ||
+            !_passwordHasher.VerifyPassword(request.Password, user.PasswordHash))
         {
             return Result.Failure<LoginResponse>(new Error("Auth.InvalidCredentials", "Invalid email or password"));
         }

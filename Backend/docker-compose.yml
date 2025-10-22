@@ -53,6 +53,8 @@ services:
       REDIS_HOST: redis
       REDIS_PASSWORD: YOUR_PASSWORD
       REDIS_PORT: 6379
+      Firebase__CredentialsPath: /secrets/firebase/serviceAccount.json
+      GOOGLE_APPLICATION_CREDENTIALS: /secrets/firebase/serviceAccount.json
       # JWT Configuration
       Jwt__SecretKey: YourSuperSecretKeyThatIsAtLeast32CharactersLong!@#$%^&*()
       Jwt__Issuer: UserMicroservice
@@ -63,6 +65,8 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+    volumes:
+      - ./secrets/firebase/serviceAccount.json:/secrets/firebase/serviceAccount.json:ro
     networks:
       - app-network
 

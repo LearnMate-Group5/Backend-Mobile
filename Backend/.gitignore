@@ -5,4 +5,6 @@
 docker-compose-production.yml
 cloudfront_private_key.pem
 ec2_private_key.pem
+# Firebase service account (real key kept out of source control)
+secrets/firebase/serviceAccount.json
 #docker-compose -f docker-compose-production.yml -p microservices up --build -d
