@@ -20,12 +20,12 @@ public class MyDbContextFactory : IDesignTimeDbContextFactory<MyDbContext>
 
         if (string.IsNullOrWhiteSpace(connectionString))
         {
-            var host = Environment.GetEnvironmentVariable("DATABASE_HOST") ?? "localhost";
-            var port = Environment.GetEnvironmentVariable("DATABASE_PORT") ?? "5432";
-            var database = Environment.GetEnvironmentVariable("DATABASE_NAME") ?? "userservice_db";
-            var username = Environment.GetEnvironmentVariable("DATABASE_USERNAME") ?? "postgres";
-            var password = Environment.GetEnvironmentVariable("DATABASE_PASSWORD") ?? "password";
-            var sslMode = Environment.GetEnvironmentVariable("DATABASE_SSLMODE") ?? "Prefer";
+            var host = Environment.GetEnvironmentVariable("DATABASE_HOST") ?? "pg-2-database25812.g.aivencloud.com";
+            var port = Environment.GetEnvironmentVariable("DATABASE_PORT") ?? "19217";
+            var database = Environment.GetEnvironmentVariable("DATABASE_NAME") ?? "userdb";
+            var username = Environment.GetEnvironmentVariable("DATABASE_USERNAME") ?? "avnadmin";
+            var password = Environment.GetEnvironmentVariable("DATABASE_PASSWORD") ?? "AVNS_vsIotPLRrxJUhcJlM0m";
+            var sslMode = Environment.GetEnvironmentVariable("DATABASE_SSLMODE") ?? "Require";
             connectionString = $"Host={host};Port={port};Database={database};Username={username};Password={password};SslMode={sslMode}";
         }
 

@@ -1,12 +1,25 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 
 namespace Application.Users.Queries
 {
     public sealed record GetUserResponse(
+        Guid UserId,
         string Name,
-        string Email
+        string Email,
+        bool IsVerified,
+        bool IsActive,
+        string? AvatarUrl,
+        bool? IsPremium,
+        string? ProviderName,
+        DateTime? CreatedAt,
+        DateTime? UpdatedAt
+    );
+
+    public sealed record GetUsersPageResponse(
+        IReadOnlyList<GetUserResponse> Users,
+        int PageNumber,
+        int PageSize,
+        int TotalCount
     );
 }

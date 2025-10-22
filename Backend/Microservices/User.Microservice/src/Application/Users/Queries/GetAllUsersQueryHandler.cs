@@ -1,37 +1,56 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using SharedLibrary.Common.ResponseModel;
 using SharedLibrary.Abstractions.Messaging;
-using AutoMapper;
 using Domain.Repositories;
-using MediatR;
 using Microsoft.EntityFrameworkCore;
 
 namespace Application.Users.Queries
 {
-    public sealed record GetAllUsersQuery : IQuery<IEnumerable<GetUserResponse>>;
-    internal sealed class GetAllUsersQueryHandler : IQueryHandler<GetAllUsersQuery, IEnumerable<GetUserResponse>>
-    {
-        private readonly IUserRepository _userRepository;
-        private readonly IMapper _mapper;
+    public sealed record GetAllUsersQuery(int PageNumber = 1, int PageSize = 20) : IQuery<GetUsersPageResponse>;
 
-        public GetAllUsersQueryHandler(IUserRepository userRepository, IMapper mapper)
+    internal sealed class GetAllUsersQueryHandler : IQueryHandler<GetAllUsersQuery, GetUsersPageResponse>
+    {
+        private const int MaxPageSize = 100;
+        private readonly IUserRepository _userRepository;
+
+        public GetAllUsersQueryHandler(IUserRepository userRepository)
         {
             _userRepository = userRepository;
-            _mapper = mapper;
         }
 
-
-        public async Task<Result<IEnumerable<GetUserResponse>>> Handle(GetAllUsersQuery request, CancellationToken cancellationToken)
+        public async Task<Result<GetUsersPageResponse>> Handle(GetAllUsersQuery request, CancellationToken cancellationToken)
         {
-            var userResponses = await _userRepository
-                .GetAll()
-                .Select(u => new GetUserResponse(u.Name, u.Email))
+            var pageNumber = request.PageNumber <= 0 ? 1 : request.PageNumber;
+            var pageSize = request.PageSize <= 0 ? 20 : Math.Min(request.PageSize, MaxPageSize);
+
+            var query = _userRepository.GetAll();
+
+            var totalCount = await query.CountAsync(cancellationToken);
+
+            var users = await query
+                .OrderByDescending(u => u.CreatedAt ?? DateTime.UnixEpoch)
+                .Skip((pageNumber - 1) * pageSize)
+                .Take(pageSize)
+                .Select(u => new GetUserResponse(
+                    u.UserId,
+                    u.Name,
+                    u.Email,
+                    u.IsVerified,
+                    u.IsActive,
+                    u.AvatarUrl,
+                    u.IsPremium,
+                    u.ProviderName,
+                    u.CreatedAt,
+                    u.UpdatedAt))
                 .ToListAsync(cancellationToken);
 
-            return Result.Success(userResponses.AsEnumerable());
+            var result = new GetUsersPageResponse(users, pageNumber, pageSize, totalCount);
+
+            return Result.Success(result);
         }
     }
 }

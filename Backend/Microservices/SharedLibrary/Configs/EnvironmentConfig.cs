@@ -7,11 +7,11 @@ namespace SharedLibrary.Configs
 {
     public class EnvironmentConfig
     {
-        public string DatabaseHost => Environment.GetEnvironmentVariable("DATABASE_HOST") ?? "localhost";
-        public int DatabasePort => int.TryParse(Environment.GetEnvironmentVariable("DATABASE_PORT"), out var port) ? port : 5432;
-        public string DatabaseName => Environment.GetEnvironmentVariable("DATABASE_NAME") ?? "microservices_db";
-        public string DatabaseUser => Environment.GetEnvironmentVariable("DATABASE_USERNAME") ?? "postgres";
-        public string DatabasePassword => Environment.GetEnvironmentVariable("DATABASE_PASSWORD") ?? "password";
+        public string DatabaseHost => Environment.GetEnvironmentVariable("DATABASE_HOST") ?? "pg-2-database25812.g.aivencloud.com";
+        public int DatabasePort => int.TryParse(Environment.GetEnvironmentVariable("DATABASE_PORT"), out var port) ? port : 19217;
+        public string DatabaseName => Environment.GetEnvironmentVariable("DATABASE_NAME") ?? "userdb";
+        public string DatabaseUser => Environment.GetEnvironmentVariable("DATABASE_USERNAME") ?? "avnadmin";
+        public string DatabasePassword => Environment.GetEnvironmentVariable("DATABASE_PASSWORD") ?? "AVNS_vsIotPLRrxJUhcJlM0m";
         public string DatabaseProvider => Environment.GetEnvironmentVariable("DATABASE_PROVIDER") ?? "postgres";
         
         // RabbitMQ Cloud Configuration (priority)

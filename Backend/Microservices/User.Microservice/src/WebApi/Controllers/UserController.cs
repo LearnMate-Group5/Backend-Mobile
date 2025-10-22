@@ -64,13 +64,15 @@ namespace WebApi.Controllers
             {
                 return HandleFailure(result);
             }
+
             var commit = await _mediator.Send(new SaveChangesCommand(), cancellationToken);
             if (commit.IsFailure)
-        {
-            return HandleFailure(commit);
+            {
+                return HandleFailure(commit);
+            }
+
+            return Ok(result);
         }
-        return Ok(result);
-    }
 
         [HttpPut("{userId:guid}/activation")]
         [Authorize("Admin")]
@@ -92,6 +94,26 @@ namespace WebApi.Controllers
             return Ok(result);
         }
 
+        [HttpPut("{userId:guid}/profile")]
+        [Authorize("Admin", "User")]
+        public async Task<IActionResult> UpdateProfile([FromRoute] Guid userId, [FromBody] UpdateUserProfileRequest request, CancellationToken cancellationToken)
+        {
+            var command = new UpdateUserProfileCommand(userId, request.Name, request.Email, request.AvatarUrl);
+            var result = await _mediator.Send(command, cancellationToken);
+            if (result.IsFailure)
+            {
+                return HandleFailure(result);
+            }
+
+            var commit = await _mediator.Send(new SaveChangesCommand(), cancellationToken);
+            if (commit.IsFailure)
+            {
+                return HandleFailure(commit);
+            }
+
+            return NoContent();
+        }
+
         [HttpPost("refresh-token")]
         [AllowAnonymous]
         public async Task<IActionResult> RefreshToken([FromBody] RefreshTokenCommand command, CancellationToken cancellationToken)
@@ -111,9 +133,10 @@ namespace WebApi.Controllers
 
         [HttpGet("read")]
         [Authorize("Admin", "User")]
-        public async Task<IActionResult> GetAll(CancellationToken cancellationToken)
+        public async Task<IActionResult> GetAll([FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 20, CancellationToken cancellationToken = default)
         {
-            var result = await _mediator.Send(new GetAllUsersQuery(), cancellationToken);
+            var query = new GetAllUsersQuery(pageNumber, pageSize);
+            var result = await _mediator.Send(query, cancellationToken);
             return Ok(result);
         }
 
@@ -123,4 +146,6 @@ namespace WebApi.Controllers
             return Ok();
         }
     }
+
+    public sealed record UpdateUserProfileRequest(string Name, string Email, string? AvatarUrl);
 }
