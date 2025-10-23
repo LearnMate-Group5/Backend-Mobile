@@ -6,7 +6,7 @@ on:
       environment:
         description: "GitHub Environment to use."
         type: string
-        default: infrastructure-khanghv2406
+        default: infrastructure-chooy5704
         required: true
 
 env:
@@ -184,6 +184,3 @@ jobs:
           else
             echo "One or more builds failed. Check the job logs above for details." >> $GITHUB_STEP_SUMMARY
           fi
-
-
-

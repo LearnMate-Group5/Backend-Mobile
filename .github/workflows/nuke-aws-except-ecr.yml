@@ -6,7 +6,7 @@ on:
       environment:
         description: "GitHub Environment to use."
         type: string
-        default: infrastructure-khanghv2406
+        default: infrastructure-chooy5704
         required: true
       confirm:
         description: "Type NUKE to confirm irreversible deletion (except ECR)"
