@@ -40,6 +40,24 @@ module "alb" {
         healthy_threshold   = var.services["apigateway"].alb_health_check.healthy_threshold
         unhealthy_threshold = var.services["apigateway"].alb_health_check.unhealthy_threshold
       }
+    },
+    {
+      # n8n Target Group
+      name_suffix = "n8n"
+      port        = var.services["n8n"].alb_target_group_port
+      protocol    = var.services["n8n"].alb_target_group_protocol
+      target_type = var.services["n8n"].alb_target_group_type
+      health_check = {
+        enabled             = var.services["n8n"].alb_health_check.enabled
+        path                = var.services["n8n"].alb_health_check.path
+        port                = var.services["n8n"].alb_health_check.port
+        protocol            = var.services["n8n"].alb_health_check.protocol
+        matcher             = var.services["n8n"].alb_health_check.matcher
+        interval            = var.services["n8n"].alb_health_check.interval
+        timeout             = var.services["n8n"].alb_health_check.timeout
+        healthy_threshold   = var.services["n8n"].alb_health_check.healthy_threshold
+        unhealthy_threshold = var.services["n8n"].alb_health_check.unhealthy_threshold
+      }
     }
   ]
 
@@ -48,7 +66,13 @@ module "alb" {
     target_group_suffix = "apigateway"
   }
 
-  listener_rules_definition = []
+  listener_rules_definition = [
+    {
+      priority            = var.services["n8n"].alb_listener_rule_priority
+      target_group_suffix = "n8n"
+      conditions          = var.services["n8n"].alb_listener_rule_conditions
+    }
+  ]
 }
 
 # EC2 Module
@@ -65,10 +89,23 @@ module "ec2" {
     server-1 = {
       instance_attributes = { service_group = "server-1" }
       tags                = { ServiceGroup = "server-1" }
+      user_data_extra     = <<-EOF
+        mkdir -p /var/lib/${var.project_name}/rabbitmq
+        mkdir -p /var/lib/${var.project_name}/redis
+        chown 999:999 /var/lib/${var.project_name}/rabbitmq || true
+        chown 999:999 /var/lib/${var.project_name}/redis || true
+        chmod 0775 /var/lib/${var.project_name}/rabbitmq || chmod 0777 /var/lib/${var.project_name}/rabbitmq
+        chmod 0775 /var/lib/${var.project_name}/redis || chmod 0777 /var/lib/${var.project_name}/redis
+      EOF
     }
     server-2 = {
       instance_attributes = { service_group = "server-2" }
       tags                = { ServiceGroup = "server-2" }
+      user_data_extra     = <<-EOF
+        mkdir -p /var/lib/${var.project_name}/n8n
+        chown 1000:1000 /var/lib/${var.project_name}/n8n || true
+        chmod 0775 /var/lib/${var.project_name}/n8n || chmod 0777 /var/lib/${var.project_name}/n8n
+      EOF
     }
   }
 
@@ -203,7 +240,7 @@ module "ecs_server1" {
   service_dependencies     = {}
   enable_auto_scaling      = var.enable_auto_scaling
   enable_service_connect   = var.enable_service_connect
-  
+
   # Pass shared resources
   shared_log_group_name     = aws_cloudwatch_log_group.ecs_logs.name
   shared_task_role_arn      = aws_iam_role.ecs_task_role.arn
@@ -260,6 +297,17 @@ module "ecs_server1" {
         }
       ]
 
+      volumes = [
+        {
+          name      = "rabbitmq-data"
+          host_path = "/var/lib/${var.project_name}/rabbitmq"
+        },
+        {
+          name      = "redis-data"
+          host_path = "/var/lib/${var.project_name}/redis"
+        }
+      ]
+
       containers = [
         {
           # RabbitMQ - deployed first as dependency
@@ -278,6 +326,12 @@ module "ecs_server1" {
             retries     = var.services["rabbitmq"].ecs_container_health_check.retries
             startPeriod = var.services["rabbitmq"].ecs_container_health_check.startPeriod
           }
+          mount_points = [
+            {
+              source_volume  = "rabbitmq-data"
+              container_path = "/var/lib/rabbitmq"
+            }
+          ]
           depends_on = []
         },
         {
@@ -298,6 +352,12 @@ module "ecs_server1" {
             retries     = var.services["redis"].ecs_container_health_check.retries
             startPeriod = var.services["redis"].ecs_container_health_check.startPeriod
           }
+          mount_points = [
+            {
+              source_volume  = "redis-data"
+              container_path = "/data"
+            }
+          ]
           depends_on = []
         },
         {
@@ -351,7 +411,7 @@ module "ecs_server2" {
   service_dependencies     = {}
   enable_auto_scaling      = var.enable_auto_scaling
   enable_service_connect   = var.enable_service_connect
-  
+
   # Pass shared resources (same as server-1)
   shared_log_group_name     = aws_cloudwatch_log_group.ecs_logs.name
   shared_task_role_arn      = aws_iam_role.ecs_task_role.arn
@@ -374,6 +434,17 @@ module "ecs_server2" {
         ]
       },
       {
+        # Publish n8n automation to namespace
+        port_name      = var.services["n8n"].ecs_service_connect_port_name
+        discovery_name = var.services["n8n"].ecs_service_connect_discovery_name
+        client_aliases = [
+          {
+            dns_name = var.services["n8n"].ecs_service_connect_dns_name
+            port     = var.services["n8n"].ecs_container_port_mappings[0].container_port
+          }
+        ]
+      },
+      {
         # Publish API Gateway to namespace
         port_name      = var.services["apigateway"].ecs_service_connect_port_name
         discovery_name = var.services["apigateway"].ecs_service_connect_discovery_name
@@ -390,8 +461,8 @@ module "ecs_server2" {
 
   service_definitions = {
     server-2 = {
-      task_cpu            = 360
-      task_memory         = 360
+      task_cpu            = var.services["guest"].ecs_container_cpu + var.services["apigateway"].ecs_container_cpu + var.services["n8n"].ecs_container_cpu + 64
+      task_memory         = var.services["guest"].ecs_container_memory + var.services["apigateway"].ecs_container_memory + var.services["n8n"].ecs_container_memory + 128
       desired_count       = 1
       assign_public_ip    = false
       enable_auto_scaling = false
@@ -399,6 +470,13 @@ module "ecs_server2" {
         {
           type       = "memberOf"
           expression = "attribute:service_group == server-2"
+        }
+      ]
+
+      volumes = [
+        {
+          name      = "n8n-data"
+          host_path = "/var/lib/${var.project_name}/n8n"
         }
       ]
 
@@ -426,7 +504,114 @@ module "ecs_server2" {
           depends_on = []
         },
         {
-          # API Gateway - depends on Guest microservice
+          # n8n automation - required before API Gateway becomes available
+          name                 = "n8n"
+          image_repository_url = var.services["n8n"].ecs_container_image_repository_url
+          image_tag            = var.services["n8n"].ecs_container_image_tag
+          cpu                  = var.services["n8n"].ecs_container_cpu
+          memory               = var.services["n8n"].ecs_container_memory
+          essential            = var.services["n8n"].ecs_container_essential
+          port_mappings        = var.services["n8n"].ecs_container_port_mappings
+          environment_variables = concat(
+            [
+              for env_var in var.services["n8n"].ecs_environment_variables :
+              env_var
+            ],
+            [
+              {
+                name  = "N8N_EDITOR_BASE_URL"
+                value = "http://${module.alb.alb_dns_name}/n8n/"
+              },
+              {
+                name  = "WEBHOOK_URL"
+                value = "http://${module.alb.alb_dns_name}/n8n/"
+              },
+              {
+                name  = "VUE_APP_URL_BASE_API"
+                value = "http://${module.alb.alb_dns_name}/n8n/"
+              }
+            ]
+          )
+          health_check = {
+            command     = var.services["n8n"].ecs_container_health_check.command
+            interval    = var.services["n8n"].ecs_container_health_check.interval
+            timeout     = var.services["n8n"].ecs_container_health_check.timeout
+            retries     = var.services["n8n"].ecs_container_health_check.retries
+            startPeriod = var.services["n8n"].ecs_container_health_check.startPeriod
+          }
+          mount_points = [
+            {
+              source_volume  = "n8n-data"
+              container_path = "/home/node/.n8n"
+            }
+          ]
+          depends_on = []
+        },
+        {
+          # nginx reverse proxy to expose n8n under /n8n via ALB
+          name                 = "n8n-proxy"
+          image_repository_url = "docker.io/library/nginx"
+          image_tag            = "1.27-alpine"
+          cpu                  = 64
+          memory               = 128
+          essential            = true
+          port_mappings = [
+            {
+              container_port = 8088
+              host_port      = 0
+              protocol       = "tcp"
+              name           = "n8n-proxy"
+            }
+          ]
+          health_check = {
+            command     = ["CMD-SHELL", "wget -q --spider http://127.0.0.1:8088/n8n/healthz || exit 1"]
+            interval    = 30
+            timeout     = 5
+            retries     = 3
+            startPeriod = 30
+          }
+          command = [
+            "sh",
+            "-c",
+            <<-EOT
+cat <<'EOF' > /etc/nginx/conf.d/default.conf
+server {
+    listen 8088;
+    server_name _;
+    client_max_body_size 50m;
+
+    location = /n8n {
+        return 301 /n8n/;
+    }
+
+    location /n8n/ {
+        proxy_pass http://127.0.0.1:5678/;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Forwarded-Host $host;
+        proxy_set_header X-Forwarded-Prefix /n8n/;
+        proxy_set_header X-Forwarded-Uri $request_uri;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_redirect off;
+        proxy_buffering off;
+    }
+
+    location / {
+        return 404;
+    }
+}
+EOF
+nginx -g 'daemon off;'
+EOT
+          ]
+          depends_on = ["n8n"]
+        },
+        {
+          # API Gateway - depends on Guest microservice and n8n
           name                 = "api-gateway"
           image_repository_url = var.services["apigateway"].ecs_container_image_repository_url
           image_tag            = var.services["apigateway"].ecs_container_image_tag
@@ -445,7 +630,7 @@ module "ecs_server2" {
             retries     = var.services["apigateway"].ecs_container_health_check.retries
             startPeriod = var.services["apigateway"].ecs_container_health_check.startPeriod
           }
-          depends_on = ["guest-microservice"]
+          depends_on = ["guest-microservice", "n8n"]
         }
       ]
 
@@ -455,6 +640,12 @@ module "ecs_server2" {
           target_group_arn = module.alb.target_group_arns_map["apigateway"]
           container_name   = "api-gateway"
           container_port   = var.services["apigateway"].ecs_container_port_mappings[0].container_port
+        },
+        {
+          # n8n HTTP exposure via ALB
+          target_group_arn = module.alb.target_group_arns_map["n8n"]
+          container_name   = "n8n-proxy"
+          container_port   = 8088
         }
       ]
     }

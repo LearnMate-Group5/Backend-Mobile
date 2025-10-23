@@ -1,3 +1,14 @@
+locals {
+  listener_rules_list = tolist(try(nonsensitive(var.listener_rules_definition), var.listener_rules_definition))
+  listener_rules = {
+    for idx, rule in local.listener_rules_list :
+    tostring(idx) => merge(rule, {
+      conditions = try(nonsensitive(rule.conditions), rule.conditions)
+    })
+    if length(coalesce(try(rule.conditions, []), [])) > 0
+  }
+}
+
 resource "aws_security_group" "alb_sg" {
   name_prefix = "${var.project_name}-alb-sg-" # Added trailing hyphen for better readability if name_prefix truncates
   vpc_id      = var.vpc_id
@@ -86,7 +97,7 @@ resource "aws_lb_listener" "http" {
     type = var.default_listener_action.type
     target_group_arn = var.default_listener_action.type == "forward" && var.default_listener_action.target_group_suffix != null ? (
       aws_lb_target_group.this[var.default_listener_action.target_group_suffix].arn
-      ) : null
+    ) : null
 
     dynamic "fixed_response" {
       for_each = var.default_listener_action.type == "fixed-response" ? compact([try(var.default_listener_action.fixed_response, null)]) : []
@@ -104,7 +115,7 @@ resource "aws_lb_listener" "http" {
 }
 
 resource "aws_lb_listener_rule" "rules" {
-  for_each = { for idx, rule_conf in var.listener_rules_definition : idx => rule_conf } # Use index for unique keying
+  for_each = try(nonsensitive(local.listener_rules), local.listener_rules) # Use index for unique keying and skip empty condition sets
 
   listener_arn = aws_lb_listener.http.arn
   priority     = each.value.priority
@@ -115,22 +126,22 @@ resource "aws_lb_listener_rule" "rules" {
   }
 
   dynamic "condition" {
-    for_each = each.value.conditions
+    for_each = coalesce(try(each.value.conditions, []), [])
     content {
       dynamic "path_pattern" {
-        for_each = condition.value.path_pattern != null ? [condition.value.path_pattern] : []
+        for_each = try(condition.value.path_pattern, null) != null ? [condition.value.path_pattern] : []
         content {
           values = path_pattern.value.values
         }
       }
       dynamic "host_header" {
-        for_each = condition.value.host_header != null ? [condition.value.host_header] : []
+        for_each = try(condition.value.host_header, null) != null ? [condition.value.host_header] : []
         content {
           values = host_header.value.values
         }
       }
       dynamic "http_request_method" {
-        for_each = condition.value.http_request_method != null ? [condition.value.http_request_method] : []
+        for_each = try(condition.value.http_request_method, null) != null ? [condition.value.http_request_method] : []
         content {
           values = http_request_method.value.values
         }

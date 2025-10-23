@@ -6,7 +6,7 @@ on:
       environment:
         description: "GitHub Environment to use (secrets/vars)."
         type: string
-        default: infrastructure-chooy5704
+        default: infrastructure-khanghv2406
         required: true
       dry_run:
         description: "Preview only (do NOT delete)."

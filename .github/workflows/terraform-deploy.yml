@@ -6,7 +6,7 @@ on:
       environment:
         description: "GitHub Environment to use."
         type: string
-        default: infrastructure-chooy5704
+        default: infrastructure-khanghv2406
         required: true
       action:
         description: "Terraform action to perform"
@@ -140,15 +140,15 @@ jobs:
           AWS_REGION: ${{ env.AWS_REGION }}
           PROJECT_NAME: ${{ env.PROJECT_NAME }}
         run: |
-          BUCKET="${PROJECT_NAME}-terraform-state"
-          TABLE="${PROJECT_NAME}-terraform-locks"
-
+          BUCKET="${PROJECT_NAME}-${AWS_REGION}-terraform-state"
+          TABLE="${PROJECT_NAME}-${AWS_REGION}-terraform-locks"
+          
           echo "Initializing Terraform with backend:"
           echo "  Bucket: ${BUCKET}"
           echo "  Key: terraform/state.tfstate"
           echo "  Region: ${AWS_REGION}"
           echo "  DynamoDB Table: ${TABLE}"
-
+          
           terraform init \
             -backend-config="bucket=${BUCKET}" \
             -backend-config="key=terraform/state.tfstate" \
@@ -242,7 +242,7 @@ jobs:
           echo "**Project**: ${{ env.PROJECT_NAME }}" >> $GITHUB_STEP_SUMMARY
           echo "**Status**: ${{ job.status }}" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-
+          
           if [ "${{ inputs.action }}" == "plan" ]; then
             echo "Plan completed successfully! Review the changes above." >> $GITHUB_STEP_SUMMARY
             echo "To apply these changes, run this workflow again with action: 'apply'" >> $GITHUB_STEP_SUMMARY
@@ -270,7 +270,7 @@ jobs:
           script: |
             const fs = require('fs');
             const { execSync } = require('child_process');
-
+            
             try {
               const plan = execSync('cd Terraform && terraform show -no-color tfplan', { encoding: 'utf8' });
               const comment = `## Terraform Plan 📋
