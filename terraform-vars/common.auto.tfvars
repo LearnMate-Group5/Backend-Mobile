@@ -1,5 +1,5 @@
 # Common Infrastructure Variables
-project_name = "vkev"
+project_name = "chooy"
 aws_region   = "us-east-1"
 region       = "us-east-1"
 
