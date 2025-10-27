@@ -14,7 +14,9 @@ using SharedLibrary.Migrations;
 using SharedLibrary.Utils;
 using FirebaseAdmin;
 using Google.Apis.Auth.OAuth2;
+using System;
 using System.IO;
+using System.Linq;
 
 var solutionDirectory = Directory.GetParent(Directory.GetCurrentDirectory())?.FullName ?? "";
 if (solutionDirectory != null)
@@ -37,9 +39,31 @@ if (!shouldAutoApplyMigrations)
 }
 
 var environment = builder.Environment;
+const string CorsPolicyName = "AllowFrontend";
+var configuredOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>();
+var allowedCorsOrigins = (configuredOrigins ?? Array.Empty<string>())
+    .Where(origin => !string.IsNullOrWhiteSpace(origin))
+    .Distinct(StringComparer.OrdinalIgnoreCase)
+    .ToArray();
+
+if (allowedCorsOrigins.Length == 0)
+{
+    allowedCorsOrigins = new[] { "http://localhost:5173" };
+}
 
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy(CorsPolicyName, policy =>
+    {
+        policy
+            .WithOrigins(allowedCorsOrigins)
+            .AllowAnyHeader()
+            .AllowAnyMethod()
+            .AllowCredentials();
+    });
+});
 
 // --- Swagger with JWT "Authorize" button ---
 builder.Services.AddSwaggerGen(c =>
@@ -168,6 +192,8 @@ if (!app.Environment.IsDevelopment())
 {
     app.UseHttpsRedirection();
 }
+
+app.UseCors(CorsPolicyName);
 
 // Your custom JWT middleware validates token and sets HttpContext.User
 app.UseMiddleware<JwtMiddleware>();

@@ -1,4 +1,6 @@
+using System;
 using System.Collections;
+using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json;
 using System.Text.Json.Nodes;
@@ -15,6 +17,59 @@ var builder = WebApplication.CreateBuilder(args);
 
 string GetEnv(string key, string def) => Environment.GetEnvironmentVariable(key) ?? def;
 int GetEnvInt(string key, int def) => int.TryParse(Environment.GetEnvironmentVariable(key), out var v) ? v : def;
+const string CorsPolicyName = "AllowFrontend";
+var configuredOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>();
+var allowedCorsOrigins = (configuredOrigins ?? Array.Empty<string>())
+    .Select(origin => origin?.Trim())
+    .Where(origin => !string.IsNullOrWhiteSpace(origin))
+    .Distinct(StringComparer.OrdinalIgnoreCase)
+    .ToArray();
+
+if (allowedCorsOrigins.Length == 0)
+{
+    allowedCorsOrigins = new[] { "http://localhost:5173" };
+}
+
+bool allowAnyLoopback = allowedCorsOrigins.Any(origin =>
+{
+    if (Uri.TryCreate(origin, UriKind.Absolute, out var uri))
+    {
+        return uri.IsLoopback;
+    }
+
+    var lowered = origin.ToLowerInvariant();
+    return lowered.Contains("localhost") || lowered.Contains("127.0.0.1") || lowered.Contains("::1");
+});
+
+var explicitExternalOrigins = new HashSet<string>(
+    allowedCorsOrigins.Where(origin =>
+        Uri.TryCreate(origin, UriKind.Absolute, out var uri) && !uri.IsLoopback),
+    StringComparer.OrdinalIgnoreCase);
+
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy(CorsPolicyName, policy =>
+    {
+        policy
+            .SetIsOriginAllowed(origin =>
+            {
+                if (explicitExternalOrigins.Contains(origin))
+                {
+                    return true;
+                }
+
+                if (!allowAnyLoopback)
+                {
+                    return false;
+                }
+
+                return Uri.TryCreate(origin, UriKind.Absolute, out var uri) && uri.IsLoopback;
+            })
+            .AllowAnyHeader()
+            .AllowAnyMethod()
+            .AllowCredentials();
+    });
+});
 
 builder.Services.Configure<ForwardedHeadersOptions>(options =>
 {
@@ -41,7 +96,7 @@ void AddRoute(string prefix, string serviceSegment, string host, int port)
     routes.Add(new JsonObject
     {
         ["UpstreamPathTemplate"] = $"/api/{serviceSegment}/{{everything}}",
-        ["UpstreamHttpMethod"] = new JsonArray("Get", "Post", "Put", "Delete"),
+        ["UpstreamHttpMethod"] = new JsonArray("Get", "Post", "Put", "Delete", "Options"),
         ["DownstreamScheme"] = "http",
         ["DownstreamHostAndPorts"] = new JsonArray(new JsonObject
         {
@@ -197,6 +252,7 @@ bool enableSwaggerUi = string.Equals(
 var app = builder.Build();
 
 app.UseForwardedHeaders();
+app.UseCors(CorsPolicyName);
 
 app.Use(async (ctx, next) =>
 {
