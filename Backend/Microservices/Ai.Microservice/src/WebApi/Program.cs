@@ -2,6 +2,8 @@ using Application;
 using Infrastructure;
 using Microsoft.OpenApi.Models;
 using Serilog;
+using SharedLibrary.Authentication;
+using SharedLibrary.Middleware;
 
 var solutionDirectory = Directory.GetParent(Directory.GetCurrentDirectory())?.FullName ?? string.Empty;
 if (!string.IsNullOrWhiteSpace(solutionDirectory))
@@ -24,6 +26,28 @@ builder.Services.AddSwaggerGen(c =>
         Version = "v1",
         Description = "Proxy microservice for AI upload and translate workflow."
     });
+
+    var jwtSecurityScheme = new OpenApiSecurityScheme
+    {
+        Scheme = "bearer",
+        BearerFormat = "JWT",
+        Name = "Authorization",
+        In = ParameterLocation.Header,
+        Type = SecuritySchemeType.Http,
+        Description = "Paste a valid JWT access token (without the 'Bearer ' prefix).",
+        Reference = new OpenApiReference
+        {
+            Id = "Bearer",
+            Type = ReferenceType.SecurityScheme
+        }
+    };
+
+    c.AddSecurityDefinition(jwtSecurityScheme.Reference.Id, jwtSecurityScheme);
+
+    c.AddSecurityRequirement(new OpenApiSecurityRequirement
+    {
+        { jwtSecurityScheme, Array.Empty<string>() }
+    });
 });
 
 builder.Services.AddAuthorization();
@@ -31,6 +55,8 @@ builder.Services.AddAuthorization();
 builder.Services
     .AddApplication()
     .AddInfrastructure();
+
+builder.Services.AddScoped<IJwtTokenService, JwtTokenService>();
 
 var app = builder.Build();
 
@@ -59,6 +85,8 @@ if (!app.Environment.IsDevelopment())
 {
     app.UseHttpsRedirection();
 }
+
+app.UseMiddleware<JwtMiddleware>();
 
 app.UseAuthorization();
 
