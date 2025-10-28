@@ -54,7 +54,7 @@ builder.Services.AddAuthorization();
 
 builder.Services
     .AddApplication()
-    .AddInfrastructure();
+    .AddInfrastructure(builder.Configuration);
 
 builder.Services.AddScoped<IJwtTokenService, JwtTokenService>();
 

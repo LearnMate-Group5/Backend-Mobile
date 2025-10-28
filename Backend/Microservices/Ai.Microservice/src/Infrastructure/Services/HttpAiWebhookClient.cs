@@ -1,4 +1,5 @@
 using System.Net.Http.Headers;
+using System.Text;
 using Application.Common.Interfaces;
 using Infrastructure.Options;
 using Microsoft.Extensions.Logging;
@@ -48,15 +49,20 @@ public class HttpAiWebhookClient : IAiWebhookClient
 
         using var formContent = new MultipartFormDataContent();
 
+        // Add userId first as a simple form field
+        var userIdValue = string.IsNullOrWhiteSpace(userId) ? string.Empty : userId;
+        formContent.Add(new StringContent(userIdValue, Encoding.UTF8), "userId");
+
+        // Add file content
         var mediaType = string.IsNullOrWhiteSpace(contentType)
             ? "application/octet-stream"
             : contentType;
 
+        var sanitizedFileName = string.IsNullOrWhiteSpace(fileName) ? "upload" : fileName;
+
         var streamContent = new StreamContent(fileStream);
         streamContent.Headers.ContentType = new MediaTypeHeaderValue(mediaType);
-        formContent.Add(streamContent, "File", fileName);
-
-        formContent.Add(new StringContent(userId), "userId");
+        formContent.Add(streamContent, "File", sanitizedFileName);
 
         using var request = new HttpRequestMessage(HttpMethod.Post, endpoint)
         {

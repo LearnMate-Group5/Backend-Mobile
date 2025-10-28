@@ -2,9 +2,10 @@ using System;
 using Application.Common.Interfaces;
 using Infrastructure.Context;
 using Infrastructure.Options;
-using Infrastructure.Services;
 using Infrastructure.Repositories;
+using Infrastructure.Services;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Infrastructure;
@@ -16,7 +17,9 @@ public static class DependencyInjection
     private const string LegacyEndpointEnvKey = "AI_WEBHOOK_ENDPOINT";
     private const string LegacyTimeoutEnvKey = "AI_WEBHOOK_TIMEOUT_SECONDS";
 
-    public static IServiceCollection AddInfrastructure(this IServiceCollection services)
+    public static IServiceCollection AddInfrastructure(
+        this IServiceCollection services,
+        IConfiguration? configuration = null)
     {
         services.AddDbContext<MyDbContext>(options =>
         {
@@ -33,24 +36,36 @@ public static class DependencyInjection
             options.UseNpgsql(connectionString);
         });
 
-        services
-            .AddOptions<AiWebhookOptions>()
-            .Configure(options =>
-            {
-                options.Endpoint = GetEnv(EndpointEnvKey, LegacyEndpointEnvKey) ?? string.Empty;
+        var optionsBuilder = services.AddOptions<AiWebhookOptions>();
 
-                var timeoutValue = GetEnv(TimeoutEnvKey, LegacyTimeoutEnvKey);
-                if (int.TryParse(timeoutValue, out var timeout) && timeout > 0)
-                {
-                    options.TimeoutSeconds = timeout;
-                }
-            })
-            .Validate(
-                options => !string.IsNullOrWhiteSpace(options.Endpoint),
-                $"{EndpointEnvKey} environment variable is required.");
+        if (configuration is not null)
+        {
+            optionsBuilder = optionsBuilder.Bind(configuration.GetSection(AiWebhookOptions.SectionName));
+        }
+
+        optionsBuilder.Configure(options =>
+        {
+            var endpointOverride = GetEnv(EndpointEnvKey, LegacyEndpointEnvKey);
+            if (!string.IsNullOrWhiteSpace(endpointOverride))
+            {
+                options.Endpoint = endpointOverride;
+            }
+
+            var timeoutValue = GetEnv(TimeoutEnvKey, LegacyTimeoutEnvKey);
+            if (int.TryParse(timeoutValue, out var timeout) && timeout > 0)
+            {
+                options.TimeoutSeconds = timeout;
+            }
+        });
+
+        optionsBuilder.Validate(
+            options => !string.IsNullOrWhiteSpace(options.Endpoint),
+            $"{EndpointEnvKey} environment variable or configuration value is required.");
 
         services.AddHttpClient<IAiWebhookClient, HttpAiWebhookClient>();
         services.AddScoped<IAiFileRepository, AiFileRepository>();
+        services.AddScoped<IAiSessionRepository, AiSessionRepository>();
+        services.AddScoped<IAiSessionMessageRepository, AiSessionMessageRepository>();
 
         return services;
     }

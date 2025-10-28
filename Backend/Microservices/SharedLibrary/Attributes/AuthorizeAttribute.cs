@@ -1,3 +1,6 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -38,7 +41,7 @@ public class AuthorizeAttribute : Attribute, IAuthorizationFilter
             var userRoles = user.Claims
                 .Where(x => x.Type == ClaimTypes.Role)
                 .Select(x => x.Value)
-                .ToList();
+                .ToHashSet(StringComparer.OrdinalIgnoreCase);
 
             if (!_roles.Any(role => userRoles.Contains(role)))
             {

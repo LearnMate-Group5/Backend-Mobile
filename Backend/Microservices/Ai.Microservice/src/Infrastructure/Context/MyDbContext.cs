@@ -17,6 +17,10 @@ public class MyDbContext : DbContext
 
     public virtual DbSet<AiFile> AiFiles { get; set; } = null!;
 
+    public virtual DbSet<AiSession> AiSessions { get; set; } = null!;
+
+    public virtual DbSet<AiSessionMessage> AiSessionMessages { get; set; } = null!;
+
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {
         if (!optionsBuilder.IsConfigured)
@@ -72,5 +76,52 @@ public class MyDbContext : DbContext
             entity.Property(e => e.CurrentContent)
                 .HasColumnName("current_content");
         });
+
+        modelBuilder.Entity<AiSessionMessage>(entity =>
+        {
+            entity.ToTable("ai_session_messages");
+
+            entity.HasKey(e => e.Id);
+
+            entity.Property(e => e.Id)
+                .HasColumnName("id");
+
+            entity.Property(e => e.SessionId)
+                .HasMaxLength(200)
+                .HasColumnName("session_id");
+
+            entity.Property(e => e.Message)
+                .HasColumnName("message")
+                .HasColumnType("jsonb");
+        });
+
+        modelBuilder.Entity<AiSession>(entity =>
+        {
+            entity.ToTable("ai_sessions");
+
+            entity.HasKey(e => e.SessionId);
+
+            entity.Property(e => e.SessionId)
+                .HasMaxLength(200)
+                .HasColumnName("session_id");
+
+            entity.Property(e => e.UserId)
+                .HasMaxLength(128)
+                .HasColumnName("user_id");
+
+            entity.Property(e => e.Title)
+                .HasMaxLength(200)
+                .HasColumnName("title");
+
+            entity.Property(e => e.CreatedDate)
+                .HasColumnName("created_date")
+                .HasColumnType("timestamp with time zone")
+                .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+            entity.Property(e => e.LastActivityDate)
+                .HasColumnName("last_activity_date")
+                .HasColumnType("timestamp with time zone");
+        });
+
     }
 }

@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using System.Security.Claims;
 using Application.Users.Commands;
 using Application.Users.Queries;
 using MediatR;
@@ -158,6 +159,25 @@ namespace WebApi.Controllers
             var query = new GetAllUsersQuery(pageNumber, pageSize);
             var result = await _mediator.Send(query, cancellationToken);
             return Ok(result);
+        }
+
+        [HttpGet("roles/me")]
+        [Authorize("Admin", "Staff", "User")]
+        public async Task<IActionResult> GetCurrentUserRoles(CancellationToken cancellationToken)
+        {
+            var userIdValue = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (!Guid.TryParse(userIdValue, out var userId))
+            {
+                return Unauthorized("User context is missing.");
+            }
+
+            var result = await _mediator.Send(new GetUserRolesQuery(userId), cancellationToken);
+            if (result.IsFailure)
+            {
+                return HandleFailure(result);
+            }
+
+            return Ok(result.Value);
         }
 
         [HttpGet("health")]
