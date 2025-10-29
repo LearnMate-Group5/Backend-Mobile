@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Application.Common.Interfaces;
 using Infrastructure.Context;
 using Microsoft.EntityFrameworkCore;
+using Domain.Entities;
 
 namespace Infrastructure.Repositories;
 
@@ -26,12 +27,34 @@ public class AiSessionMessageRepository : IAiSessionMessageRepository
             return Array.Empty<(string SessionId, int MessageCount)>();
         }
 
-        return await _context.AiSessionMessages
+        var groupedSummaries = await _context.AiSessionMessages
             .AsNoTracking()
             .Where(message => idList.Contains(message.SessionId))
             .GroupBy(message => message.SessionId)
-            .Select(group => new ValueTuple<string, int>(group.Key, group.Count()))
-            .OrderByDescending(tuple => tuple.Item2)
+            .Select(group => new
+            {
+                SessionId = group.Key,
+                MessageCount = group.Count()
+            })
+            .ToListAsync(cancellationToken);
+
+        return groupedSummaries
+            .Select(summary => (summary.SessionId, summary.MessageCount))
+            .OrderByDescending(tuple => tuple.MessageCount)
+            .ToList();
+    }
+
+    public async Task<IReadOnlyList<AiSessionMessage>> GetBySessionIdAsync(string sessionId, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(sessionId))
+        {
+            return Array.Empty<AiSessionMessage>();
+        }
+
+        return await _context.AiSessionMessages
+            .AsNoTracking()
+            .Where(message => message.SessionId == sessionId)
+            .OrderBy(message => message.Id)
             .ToListAsync(cancellationToken);
     }
 }

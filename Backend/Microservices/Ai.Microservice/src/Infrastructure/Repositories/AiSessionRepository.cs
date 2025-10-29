@@ -32,4 +32,16 @@ public class AiSessionRepository : IAiSessionRepository
             .OrderByDescending(session => session.LastActivityDate ?? session.CreatedDate)
             .ToListAsync(cancellationToken);
     }
+
+    public async Task<AiSession?> GetByIdAsync(string sessionId, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(sessionId))
+        {
+            return null;
+        }
+
+        return await _context.AiSessions
+            .AsNoTracking()
+            .FirstOrDefaultAsync(session => session.SessionId == sessionId, cancellationToken);
+    }
 }

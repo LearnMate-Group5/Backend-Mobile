@@ -118,6 +118,47 @@ public class AiController : ApiController
         return Ok(result.Value);
     }
 
+    [HttpGet("session/{sessionId}")]
+    [Authorize("Admin", "Staff", "User")]
+    public async Task<IActionResult> GetSessionMessagesAsync(
+        [FromRoute] string sessionId,
+        CancellationToken cancellationToken)
+    {
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (string.IsNullOrWhiteSpace(userId))
+        {
+            return Unauthorized("User context is missing.");
+        }
+
+        var roleSet = User.Claims
+            .Where(claim => claim.Type == ClaimTypes.Role)
+            .Select(claim => claim.Value)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        var includeAll = roleSet.Contains("Admin") || roleSet.Contains("Staff");
+
+        var result = await _mediator.Send(
+            new GetAiSessionMessagesQuery(sessionId, userId, includeAll),
+            cancellationToken);
+
+        if (result.IsFailure)
+        {
+            if (string.Equals(result.Error.Code, "AiSession.NotFound", StringComparison.Ordinal))
+            {
+                return NotFound(new { message = result.Error.Description });
+            }
+
+            if (string.Equals(result.Error.Code, "AiSession.AccessDenied", StringComparison.Ordinal))
+            {
+                return Forbid();
+            }
+
+            return HandleFailure(result);
+        }
+
+        return Ok(result.Value);
+    }
+
     [HttpGet("file/{fileId:guid}")]
     [Authorize("Admin", "Staff", "User")]
     public async Task<IActionResult> GetFileByIdAsync(
@@ -198,6 +239,11 @@ public class AiController : ApiController
         }
 
         return Ok(new { message = "File deleted successfully." });
+    }
+    [HttpGet("health")]
+    public IActionResult Health()
+    {
+        return Ok();
     }
 }
 

@@ -1,5 +1,10 @@
+using System;
+using System.IO;
+using System.Net;
+using System.Net.Http;
 using System.Net.Http.Headers;
-using System.Text;
+using System.Threading;
+using System.Threading.Tasks;
 using Application.Common.Interfaces;
 using Infrastructure.Options;
 using Microsoft.Extensions.Logging;
@@ -19,8 +24,8 @@ public class HttpAiWebhookClient : IAiWebhookClient
         ILogger<HttpAiWebhookClient> logger)
     {
         _httpClient = httpClient;
-        _options = options.Value;
         _logger = logger;
+        _options = options.Value ?? throw new ArgumentNullException(nameof(options));
 
         if (_options.TimeoutSeconds > 0)
         {
@@ -35,66 +40,100 @@ public class HttpAiWebhookClient : IAiWebhookClient
         string userId,
         CancellationToken cancellationToken)
     {
-        var endpoint = _options.Endpoint;
-        if (string.IsNullOrWhiteSpace(endpoint))
+        if (string.IsNullOrWhiteSpace(_options.Endpoint))
         {
-            _logger.LogError("AI webhook endpoint is not configured.");
-            throw new InvalidOperationException("AI webhook endpoint is not configured.");
+            const string message = "AI webhook endpoint is not configured.";
+            _logger.LogError(message);
+            return new AiWebhookClientResponse(HttpStatusCode.InternalServerError, message, false);
         }
 
-        if (fileStream.CanSeek)
-        {
-            fileStream.Position = 0;
-        }
+        var requestUri = CreateRequestUri(_options.Endpoint);
 
-        using var formContent = new MultipartFormDataContent();
+        using var request = new HttpRequestMessage(HttpMethod.Post, requestUri);
+        using var form = CreateFormContent(fileStream, fileName, contentType, userId);
 
-        // Add userId first as a simple form field
-        var userIdValue = string.IsNullOrWhiteSpace(userId) ? string.Empty : userId;
-        formContent.Add(new StringContent(userIdValue, Encoding.UTF8), "userId");
-
-        // Add file content
-        var mediaType = string.IsNullOrWhiteSpace(contentType)
-            ? "application/octet-stream"
-            : contentType;
-
-        var sanitizedFileName = string.IsNullOrWhiteSpace(fileName) ? "upload" : fileName;
-
-        var streamContent = new StreamContent(fileStream);
-        streamContent.Headers.ContentType = new MediaTypeHeaderValue(mediaType);
-        formContent.Add(streamContent, "File", sanitizedFileName);
-
-        using var request = new HttpRequestMessage(HttpMethod.Post, endpoint)
-        {
-            Content = formContent
-        };
+        request.Content = form;
 
         try
         {
-            var response = await _httpClient.SendAsync(
+            using var response = await _httpClient.SendAsync(
                 request,
-                HttpCompletionOption.ResponseContentRead,
+                HttpCompletionOption.ResponseHeadersRead,
                 cancellationToken);
 
-            var payload = await response.Content.ReadAsStringAsync(cancellationToken);
+            var responseBody = response.Content is null
+                ? string.Empty
+                : await response.Content.ReadAsStringAsync(cancellationToken);
 
             return new AiWebhookClientResponse(
                 response.StatusCode,
-                payload,
+                responseBody,
                 response.IsSuccessStatusCode);
         }
-        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        catch (OperationCanceledException exception) when (!cancellationToken.IsCancellationRequested)
         {
-            _logger.LogWarning("AI webhook upload was cancelled for user {UserId}.", userId);
-            throw;
+            _logger.LogError(
+                exception,
+                "Timed out calling AI webhook at {Endpoint} for user {UserId}.",
+                requestUri,
+                userId);
+
+            return new AiWebhookClientResponse(
+                HttpStatusCode.RequestTimeout,
+                "AI webhook call timed out.",
+                false);
         }
         catch (Exception exception)
         {
             _logger.LogError(
                 exception,
-                "Unexpected error while calling AI webhook for user {UserId}.",
+                "Unexpected error calling AI webhook at {Endpoint} for user {UserId}.",
+                requestUri,
                 userId);
-            throw;
+
+            return new AiWebhookClientResponse(
+                HttpStatusCode.InternalServerError,
+                exception.Message,
+                false);
         }
+    }
+
+    private static Uri CreateRequestUri(string endpoint)
+    {
+        if (Uri.TryCreate(endpoint, UriKind.Absolute, out var absolute))
+        {
+            return absolute;
+        }
+
+        return new Uri(endpoint, UriKind.Relative);
+    }
+
+    private static MultipartFormDataContent CreateFormContent(
+        Stream fileStream,
+        string fileName,
+        string contentType,
+        string userId)
+    {
+        var form = new MultipartFormDataContent();
+
+        var normalizedFileName = string.IsNullOrWhiteSpace(fileName)
+            ? "upload"
+            : Path.GetFileName(fileName);
+
+        var streamContent = new StreamContent(fileStream);
+
+        if (!string.IsNullOrWhiteSpace(contentType))
+        {
+            streamContent.Headers.ContentType = MediaTypeHeaderValue.Parse(contentType);
+        }
+
+        form.Add(streamContent, "file", normalizedFileName);
+
+        if (!string.IsNullOrWhiteSpace(userId))
+        {
+            form.Add(new StringContent(userId), "userId");
+        }
+
+        return form;
     }
 }

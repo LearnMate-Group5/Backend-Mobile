@@ -261,6 +261,16 @@ module "ecs_server1" {
         ]
       },
       {
+        port_name      = var.services["ai"].ecs_service_connect_port_name
+        discovery_name = var.services["ai"].ecs_service_connect_discovery_name
+        client_aliases = [
+          {
+            dns_name = var.services["ai"].ecs_service_connect_dns_name
+            port     = var.services["ai"].ecs_container_port_mappings[0].container_port
+          }
+        ]
+      },
+      {
         port_name      = var.services["rabbitmq"].ecs_service_connect_port_name
         discovery_name = var.services["rabbitmq"].ecs_service_connect_discovery_name
         client_aliases = [
@@ -286,8 +296,8 @@ module "ecs_server1" {
 
   service_definitions = {
     server-1 = {
-      task_cpu         = 640
-      task_memory      = 640
+      task_cpu         = 760
+      task_memory      = 760
       desired_count    = 1
       assign_public_ip = false
       placement_constraints = [
@@ -381,7 +391,31 @@ module "ecs_server1" {
             startPeriod = var.services["user"].ecs_container_health_check.startPeriod
           }
           depends_on = ["rabbitmq", "redis"]
+        },
+
+         {
+          # Ai microservice - depends on RabbitMQ and Redis
+          name                 = "ai-microservice"
+          image_repository_url = var.services["ai"].ecs_container_image_repository_url
+          image_tag            = var.services["ai"].ecs_container_image_tag
+          cpu                  = var.services["ai"].ecs_container_cpu
+          memory               = var.services["ai"].ecs_container_memory
+          essential            = var.services["ai"].ecs_container_essential
+          port_mappings        = var.services["ai"].ecs_container_port_mappings
+          environment_variables = [
+            for env_var in var.services["ai"].ecs_environment_variables :
+            env_var
+          ]
+          health_check = {
+            command     = var.services["ai"].ecs_container_health_check.command
+            interval    = var.services["ai"].ecs_container_health_check.interval
+            timeout     = var.services["ai"].ecs_container_health_check.timeout
+            retries     = var.services["ai"].ecs_container_health_check.retries
+            startPeriod = var.services["ai"].ecs_container_health_check.startPeriod
+          }
+          depends_on = ["rabbitmq", "redis"]
         }
+
       ]
 
       target_groups = []

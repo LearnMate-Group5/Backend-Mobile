@@ -37,7 +37,7 @@
         -1136,
         96
       ],
-      "id": "e3385824-00d3-47d6-9f0b-117737ccb73c",
+      "id": "2b51773b-9ac5-4d24-b547-e7f7398ebfb8",
       "name": "Upload to Mistral"
     },
     {
@@ -69,7 +69,7 @@
         -816,
         48
       ],
-      "id": "5c2691f2-d116-4cfb-aa66-52c7f5bdd0d4",
+      "id": "439983db-f53f-4354-bb7c-747b13f67ee3",
       "name": "Get Signed URL"
     },
     {
@@ -96,7 +96,7 @@
         -608,
         96
       ],
-      "id": "be228700-f3e2-4503-a69a-46b2100eec91",
+      "id": "c335b9e5-a822-4726-98bf-b439825abaa5",
       "name": "Get OCR Results"
     },
     {
@@ -109,7 +109,7 @@
         -400,
         96
       ],
-      "id": "01356320-18bb-49e4-914b-211576c84247",
+      "id": "0eeb6472-5090-4945-8c28-c5937dfc7c0f",
       "name": "Code in JavaScript"
     },
     {
@@ -154,7 +154,7 @@
         0,
         0
       ],
-      "id": "fef71047-4151-4411-933f-550b8a608e9d",
+      "id": "542b627d-b648-48c9-8ea2-99b8f441b0d5",
       "name": "HTTP Request"
     },
     {
@@ -176,11 +176,11 @@
         256,
         320
       ],
-      "id": "bb19aa00-8dcc-4fee-9c5e-0cb595a57b99",
+      "id": "ca526e17-f31a-4e09-9c22-48f485f1b6a7",
       "name": "Pinecone Vector Store",
       "credentials": {
         "pineconeApi": {
-          "id": "RJSMtRcfu9x64fwS",
+          "id": "Btrg2PWR4eUsGxJY",
           "name": "PineconeApi account"
         }
       }
@@ -196,7 +196,7 @@
         240,
         608
       ],
-      "id": "1ade310c-67f9-4008-bfa5-b6f70d56f54b",
+      "id": "1a9df92c-274b-431a-9faa-1046cb63b82c",
       "name": "Default Data Loader"
     },
     {
@@ -209,7 +209,7 @@
         224,
         832
       ],
-      "id": "0fab20a2-4a1c-429e-b1ae-209260341537",
+      "id": "6a14d1f5-cc79-47bd-8604-64b53c2cb38f",
       "name": "Recursive Character Text Splitter"
     },
     {
@@ -220,11 +220,11 @@
         48,
         624
       ],
-      "id": "794f4660-69d0-4aa7-b430-9daa3736806f",
+      "id": "a8d50453-4cb8-41de-8b67-6774d91af018",
       "name": "Embeddings Google Gemini",
       "credentials": {
         "googlePalmApi": {
-          "id": "b2FDp0bct4PgBaQE",
+          "id": "l6GvseOUwWn11bDW",
           "name": "Google Gemini(PaLM) Api account"
         }
       }
@@ -241,7 +241,7 @@
         -528,
         336
       ],
-      "id": "74de3592-dbfe-4687-8283-bb351b70f7b2",
+      "id": "665b48dc-4ba1-4d4c-a0a6-f5ad81f27d90",
       "name": "Merge1"
     },
     {
@@ -270,7 +270,7 @@
         0,
         320
       ],
-      "id": "020e2be1-dfa4-4f25-bc25-d8189ee824c1",
+      "id": "33ac0cae-078d-4c1c-89a7-9073110f66b4",
       "name": "Edit Fields"
     },
     {
@@ -285,7 +285,7 @@
         288,
         16
       ],
-      "id": "96b39e15-090f-43a8-8f67-3cb5f2c821eb",
+      "id": "29c71abd-2ac9-441f-8516-74921fac5788",
       "name": "Merge"
     },
     {
@@ -300,7 +300,7 @@
         -144,
         464
       ],
-      "id": "f1678e4f-660d-491a-bd1e-e5b7328572b7",
+      "id": "b6b911fd-b2ae-4526-96e2-6a2c9e445d14",
       "name": "Merge2"
     },
     {
@@ -311,7 +311,7 @@
         576,
         160
       ],
-      "id": "905d574f-c98e-4e7a-bea1-0684db8bc6d0",
+      "id": "a2d9a462-2a7f-4a59-8463-79c3da9e4cd5",
       "name": "Merge3"
     },
     {
@@ -325,7 +325,7 @@
         784,
         160
       ],
-      "id": "69e068f0-2266-4df3-b97b-c95db172abf6",
+      "id": "8f7609d7-fe71-4963-9c70-d6a1eaf3360b",
       "name": "Respond to Webhook"
     },
     {
@@ -341,7 +341,7 @@
         -1472,
         96
       ],
-      "id": "f43e9a87-82f7-49c7-88f6-296028e5601a",
+      "id": "57c6c2bd-b533-4e11-80cd-09fa83ea1792",
       "name": "Webhook",
       "webhookId": "f37c74d4-bc3f-4731-b8b2-7f5c44d98199"
     }
@@ -534,15 +534,15 @@
       ]
     }
   },
-  "active": false,
+  "active": true,
   "settings": {
     "executionOrder": "v1"
   },
-  "versionId": "ce9e61b9-e515-446f-86fd-a3dc65615904",
+  "versionId": "60a0fac0-455d-4005-8f59-d51e9a958240",
   "meta": {
     "templateCredsSetupCompleted": true,
-    "instanceId": "e9bf0244d893bde47894f366c63a7ee939b622bb1d5426459c82b9144e51c424"
+    "instanceId": "7ca16b2008560e1c2c20d4fbd12bd91885fe4d0f0d94465a14228248a9c6611c"
   },
-  "id": "7U7ar3hx9IHzDXF8",
+  "id": "BdBBdJGYOPsnnHh3",
   "tags": []
 }
