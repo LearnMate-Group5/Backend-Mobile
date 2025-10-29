@@ -161,6 +161,26 @@ namespace WebApi.Controllers
             return Ok(result);
         }
 
+        [HttpGet("{userId:guid}")]
+        [Authorize("Admin", "User")]
+        public async Task<IActionResult> GetById([FromRoute] Guid userId, CancellationToken cancellationToken)
+        {
+            var isAdmin = User.IsInRole("Admin");
+            var requesterIdValue = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (!isAdmin && (!Guid.TryParse(requesterIdValue, out var requesterId) || requesterId != userId))
+            {
+                return Forbid();
+            }
+
+            var result = await _mediator.Send(new GetUserByIdQuery(userId), cancellationToken);
+            if (result.IsFailure)
+            {
+                return HandleFailure(result);
+            }
+
+            return Ok(result.Value);
+        }
+
         [HttpGet("roles/me")]
         [Authorize("Admin", "Staff", "User")]
         public async Task<IActionResult> GetCurrentUserRoles(CancellationToken cancellationToken)

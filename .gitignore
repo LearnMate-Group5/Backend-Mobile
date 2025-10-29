@@ -4,3 +4,6 @@
 .vs/
 *.csproj.user
 out-test/
+Backend/Microservices/User.Microservice/src/WebApi/appsettings.json
+Backend/Microservices/User.Microservice/src/WebApi/appsettings.Development.json
+Backend/Microservices/User.Microservice/src/WebApi/firebase.credentials.json

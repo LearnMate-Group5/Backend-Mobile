@@ -12,6 +12,8 @@ namespace Application.Users.Queries
         string? AvatarUrl,
         bool? IsPremium,
         string? ProviderName,
+        string? ProviderUserId,
+        IReadOnlyList<string> Roles,
         DateTime? CreatedAt,
         DateTime? UpdatedAt
     );

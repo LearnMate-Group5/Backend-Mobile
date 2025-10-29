@@ -32,23 +32,41 @@ namespace Application.Users.Queries
             var totalCount = await query.CountAsync(cancellationToken);
 
             var users = await query
+                .AsNoTracking()
+                .Include(u => u.UserRoles)
+                    .ThenInclude(ur => ur.Role)
                 .OrderByDescending(u => u.CreatedAt ?? DateTime.UnixEpoch)
                 .Skip((pageNumber - 1) * pageSize)
                 .Take(pageSize)
-                .Select(u => new GetUserResponse(
-                    u.UserId,
-                    u.Name,
-                    u.Email,
-                    u.IsVerified,
-                    u.IsActive,
-                    u.AvatarUrl,
-                    u.IsPremium,
-                    u.ProviderName,
-                    u.CreatedAt,
-                    u.UpdatedAt))
                 .ToListAsync(cancellationToken);
 
-            var result = new GetUsersPageResponse(users, pageNumber, pageSize, totalCount);
+            var userResponses = users
+                .Select(u =>
+                {
+                    var roles = u.UserRoles
+                        .Where(ur => ur.Role != null && !string.IsNullOrWhiteSpace(ur.Role.RoleName))
+                        .Select(ur => ur.Role.RoleName.Trim())
+                        .Distinct(StringComparer.OrdinalIgnoreCase)
+                        .ToList()
+                        .AsReadOnly();
+
+                    return new GetUserResponse(
+                        u.UserId,
+                        u.Name,
+                        u.Email,
+                        u.IsVerified,
+                        u.IsActive,
+                        u.AvatarUrl,
+                        u.IsPremium,
+                        u.ProviderName,
+                        u.ProviderUserId,
+                        roles,
+                        u.CreatedAt,
+                        u.UpdatedAt);
+                })
+                .ToList();
+
+            var result = new GetUsersPageResponse(userResponses, pageNumber, pageSize, totalCount);
 
             return Result.Success(result);
         }
