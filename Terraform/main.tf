@@ -1,8 +1,12 @@
 locals {
-  rabbitmq_host      = "rabbitmq"
-  redis_host         = "redis"
-  guest_service_host = "guest-service"
-  user_service_host  = "user-service"
+  service_discovery_domain = "${var.project_name}.${var.service_discovery_domain_suffix}"
+  rabbitmq_host            = "rabbitmq"
+  redis_host               = "redis"
+  guest_service_host       = "guest-service"
+  user_service_host        = "user-service"
+  n8n_service_host         = "${var.services.n8n.ecs_service_connect_dns_name}.${local.service_discovery_domain}"
+  n8n_service_port         = var.services.n8n.ecs_container_port_mappings[0].container_port
+  ai_webhook_endpoint      = "http://${local.n8n_service_host}:${local.n8n_service_port}/webhook/upload-and-translate"
 }
 
 # VPC Module
@@ -402,10 +406,19 @@ module "ecs_server1" {
           memory               = var.services["ai"].ecs_container_memory
           essential            = var.services["ai"].ecs_container_essential
           port_mappings        = var.services["ai"].ecs_container_port_mappings
-          environment_variables = [
-            for env_var in var.services["ai"].ecs_environment_variables :
-            env_var
-          ]
+          environment_variables = concat(
+            [
+              for env_var in var.services.ai.ecs_environment_variables :
+              env_var
+              if env_var.name != "AiWebhook__Endpoint"
+            ],
+            [
+              {
+                name  = "AiWebhook__Endpoint"
+                value = local.ai_webhook_endpoint
+              }
+            ]
+          )
           health_check = {
             command     = var.services["ai"].ecs_container_health_check.command
             interval    = var.services["ai"].ecs_container_health_check.interval

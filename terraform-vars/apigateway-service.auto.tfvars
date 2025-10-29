@@ -41,6 +41,8 @@ services = {
       { name = "ASPNETCORE_URLS", value = "http://+:8080" },
       { name = "USER_MICROSERVICE_HOST", value = "user-service" },
       { name = "USER_MICROSERVICE_PORT", value = "5002" },
+       { name = "AI_MICROSERVICE_HOST", value = "ai-service" },
+      { name = "AI_MICROSERVICE_PORT", value = "5003" },
       { name = "GUEST_MICROSERVICE_HOST", value = "guest-service" },
       { name = "GUEST_MICROSERVICE_PORT", value = "5001" },
       { name = "Jwt__SecretKey", value = "YourSuperSecretKeyThatIsAtLeast32CharactersLong!@#$%^&*()" },
