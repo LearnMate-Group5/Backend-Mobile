@@ -96,19 +96,19 @@ module "ec2" {
       user_data_extra     = <<-EOF
         mkdir -p /var/lib/${var.project_name}/rabbitmq
         mkdir -p /var/lib/${var.project_name}/redis
+        mkdir -p /var/lib/${var.project_name}/n8n
         chown 999:999 /var/lib/${var.project_name}/rabbitmq || true
         chown 999:999 /var/lib/${var.project_name}/redis || true
+        chown 1000:1000 /var/lib/${var.project_name}/n8n || true
         chmod 0775 /var/lib/${var.project_name}/rabbitmq || chmod 0777 /var/lib/${var.project_name}/rabbitmq
         chmod 0775 /var/lib/${var.project_name}/redis || chmod 0777 /var/lib/${var.project_name}/redis
+        chmod 0775 /var/lib/${var.project_name}/n8n || chmod 0777 /var/lib/${var.project_name}/n8n
       EOF
     }
     server-2 = {
       instance_attributes = { service_group = "server-2" }
       tags                = { ServiceGroup = "server-2" }
       user_data_extra     = <<-EOF
-        mkdir -p /var/lib/${var.project_name}/n8n
-        chown 1000:1000 /var/lib/${var.project_name}/n8n || true
-        chmod 0775 /var/lib/${var.project_name}/n8n || chmod 0777 /var/lib/${var.project_name}/n8n
       EOF
     }
   }
@@ -225,7 +225,7 @@ resource "aws_service_discovery_private_dns_namespace" "ecs_namespace" {
   tags        = { Name = "${var.project_name}-dns-namespace" }
 }
 
-# ECS Module - Server-1 (User microservice + RabbitMQ + Redis)
+# ECS Module - Server-1 (RabbitMQ + Redis + n8n)
 module "ecs_server1" {
   source = "./modules/ecs"
 
@@ -255,26 +255,6 @@ module "ecs_server1" {
   service_connect_services = {
     server-1 = [
       {
-        port_name      = var.services["user"].ecs_service_connect_port_name
-        discovery_name = var.services["user"].ecs_service_connect_discovery_name
-        client_aliases = [
-          {
-            dns_name = var.services["user"].ecs_service_connect_dns_name
-            port     = var.services["user"].ecs_container_port_mappings[0].container_port
-          }
-        ]
-      },
-      {
-        port_name      = var.services["ai"].ecs_service_connect_port_name
-        discovery_name = var.services["ai"].ecs_service_connect_discovery_name
-        client_aliases = [
-          {
-            dns_name = var.services["ai"].ecs_service_connect_dns_name
-            port     = var.services["ai"].ecs_container_port_mappings[0].container_port
-          }
-        ]
-      },
-      {
         port_name      = var.services["rabbitmq"].ecs_service_connect_port_name
         discovery_name = var.services["rabbitmq"].ecs_service_connect_discovery_name
         client_aliases = [
@@ -293,15 +273,25 @@ module "ecs_server1" {
             port     = var.services["redis"].ecs_container_port_mappings[0].container_port
           }
         ]
+      },
+      {
+        port_name      = var.services["n8n"].ecs_service_connect_port_name
+        discovery_name = var.services["n8n"].ecs_service_connect_discovery_name
+        client_aliases = [
+          {
+            dns_name = var.services["n8n"].ecs_service_connect_dns_name
+            port     = var.services["n8n"].ecs_container_port_mappings[0].container_port
+          }
+        ]
       }
-      # Note: API Gateway and Guest services auto-discovered via Service Connect namespace
+      # Note: API Gateway, Guest, User, and AI services auto-discovered via Service Connect namespace
     ]
   }
 
   service_definitions = {
     server-1 = {
-      task_cpu         = 760
-      task_memory      = 760
+      task_cpu         = var.services["rabbitmq"].ecs_container_cpu + var.services["redis"].ecs_container_cpu + var.services["n8n"].ecs_container_cpu + 64
+      task_memory      = var.services["rabbitmq"].ecs_container_memory + var.services["redis"].ecs_container_memory + var.services["n8n"].ecs_container_memory + 96
       desired_count    = 1
       assign_public_ip = false
       placement_constraints = [
@@ -319,6 +309,10 @@ module "ecs_server1" {
         {
           name      = "redis-data"
           host_path = "/var/lib/${var.project_name}/redis"
+        },
+        {
+          name      = "n8n-data"
+          host_path = "/var/lib/${var.project_name}/n8n"
         }
       ]
 
@@ -375,183 +369,7 @@ module "ecs_server1" {
           depends_on = []
         },
         {
-          # User microservice - depends on RabbitMQ and Redis
-          name                 = "user-microservice"
-          image_repository_url = var.services["user"].ecs_container_image_repository_url
-          image_tag            = var.services["user"].ecs_container_image_tag
-          cpu                  = var.services["user"].ecs_container_cpu
-          memory               = var.services["user"].ecs_container_memory
-          essential            = var.services["user"].ecs_container_essential
-          port_mappings        = var.services["user"].ecs_container_port_mappings
-          environment_variables = [
-            for env_var in var.services["user"].ecs_environment_variables :
-            env_var
-          ]
-          health_check = {
-            command     = var.services["user"].ecs_container_health_check.command
-            interval    = var.services["user"].ecs_container_health_check.interval
-            timeout     = var.services["user"].ecs_container_health_check.timeout
-            retries     = var.services["user"].ecs_container_health_check.retries
-            startPeriod = var.services["user"].ecs_container_health_check.startPeriod
-          }
-          depends_on = ["rabbitmq", "redis"]
-        },
-
-         {
-          # Ai microservice - depends on RabbitMQ and Redis
-          name                 = "ai-microservice"
-          image_repository_url = var.services["ai"].ecs_container_image_repository_url
-          image_tag            = var.services["ai"].ecs_container_image_tag
-          cpu                  = var.services["ai"].ecs_container_cpu
-          memory               = var.services["ai"].ecs_container_memory
-          essential            = var.services["ai"].ecs_container_essential
-          port_mappings        = var.services["ai"].ecs_container_port_mappings
-          environment_variables = concat(
-            [
-              for env_var in var.services.ai.ecs_environment_variables :
-              env_var
-              if env_var.name != "AiWebhook__Endpoint"
-            ],
-            [
-              {
-                name  = "AiWebhook__Endpoint"
-                value = local.ai_webhook_endpoint
-              }
-            ]
-          )
-          health_check = {
-            command     = var.services["ai"].ecs_container_health_check.command
-            interval    = var.services["ai"].ecs_container_health_check.interval
-            timeout     = var.services["ai"].ecs_container_health_check.timeout
-            retries     = var.services["ai"].ecs_container_health_check.retries
-            startPeriod = var.services["ai"].ecs_container_health_check.startPeriod
-          }
-          depends_on = ["rabbitmq", "redis"]
-        }
-
-      ]
-
-      target_groups = []
-    }
-  }
-
-  depends_on = [module.ec2]
-}
-
-# ECS Module - Server-2 (API Gateway + Guest microservice)
-# Deploys after server-1 to ensure service discovery endpoints are available
-module "ecs_server2" {
-  source = "./modules/ecs"
-
-  project_name             = var.project_name
-  aws_region               = var.aws_region
-  vpc_id                   = module.vpc.vpc_id
-  vpc_cidr                 = var.vpc_cidr
-  task_subnet_ids          = [module.vpc.private_subnet_id]
-  ecs_cluster_id           = module.ec2.ecs_cluster_arn
-  ecs_cluster_name         = module.ec2.ecs_cluster_name
-  alb_security_group_id    = module.alb.alb_sg_id
-  assign_public_ip         = false
-  desired_count            = 1
-  service_names            = ["server-2"]
-  service_discovery_domain = "${var.project_name}.${var.service_discovery_domain_suffix}"
-  service_dependencies     = {}
-  enable_auto_scaling      = var.enable_auto_scaling
-  enable_service_connect   = var.enable_service_connect
-
-  # Pass shared resources (same as server-1)
-  shared_log_group_name     = aws_cloudwatch_log_group.ecs_logs.name
-  shared_task_role_arn      = aws_iam_role.ecs_task_role.arn
-  shared_execution_role_arn = aws_iam_role.ecs_execution_role.arn
-  shared_task_sg_id         = aws_security_group.ecs_task_sg.id
-  # Use existing namespace created above
-  service_connect_namespace = var.enable_service_connect ? aws_service_discovery_private_dns_namespace.ecs_namespace[0].arn : null
-
-  service_connect_services = {
-    server-2 = [
-      {
-        # Publish guest-service to namespace
-        port_name      = var.services["guest"].ecs_service_connect_port_name
-        discovery_name = var.services["guest"].ecs_service_connect_discovery_name
-        client_aliases = [
-          {
-            dns_name = var.services["guest"].ecs_service_connect_dns_name
-            port     = var.services["guest"].ecs_container_port_mappings[0].container_port
-          }
-        ]
-      },
-      {
-        # Publish n8n automation to namespace
-        port_name      = var.services["n8n"].ecs_service_connect_port_name
-        discovery_name = var.services["n8n"].ecs_service_connect_discovery_name
-        client_aliases = [
-          {
-            dns_name = var.services["n8n"].ecs_service_connect_dns_name
-            port     = var.services["n8n"].ecs_container_port_mappings[0].container_port
-          }
-        ]
-      },
-      {
-        # Publish API Gateway to namespace
-        port_name      = var.services["apigateway"].ecs_service_connect_port_name
-        discovery_name = var.services["apigateway"].ecs_service_connect_discovery_name
-        client_aliases = [
-          {
-            dns_name = var.services["apigateway"].ecs_service_connect_dns_name
-            port     = var.services["apigateway"].ecs_container_port_mappings[0].container_port
-          }
-        ]
-      }
-      # Note: User, RabbitMQ, Redis auto-discovered via Service Connect namespace
-    ]
-  }
-
-  service_definitions = {
-    server-2 = {
-      task_cpu            = var.services["guest"].ecs_container_cpu + var.services["apigateway"].ecs_container_cpu + var.services["n8n"].ecs_container_cpu + 64
-      task_memory         = var.services["guest"].ecs_container_memory + var.services["apigateway"].ecs_container_memory + var.services["n8n"].ecs_container_memory + 128
-      desired_count       = 1
-      assign_public_ip    = false
-      enable_auto_scaling = false
-      placement_constraints = [
-        {
-          type       = "memberOf"
-          expression = "attribute:service_group == server-2"
-        }
-      ]
-
-      volumes = [
-        {
-          name      = "n8n-data"
-          host_path = "/var/lib/${var.project_name}/n8n"
-        }
-      ]
-
-      containers = [
-        {
-          # Guest microservice - deployed first as dependency for API Gateway
-          name                 = "guest-microservice"
-          image_repository_url = var.services["guest"].ecs_container_image_repository_url
-          image_tag            = var.services["guest"].ecs_container_image_tag
-          cpu                  = var.services["guest"].ecs_container_cpu
-          memory               = var.services["guest"].ecs_container_memory
-          essential            = var.services["guest"].ecs_container_essential
-          port_mappings        = var.services["guest"].ecs_container_port_mappings
-          environment_variables = [
-            for env_var in var.services["guest"].ecs_environment_variables :
-            env_var
-          ]
-          health_check = {
-            command     = var.services["guest"].ecs_container_health_check.command
-            interval    = var.services["guest"].ecs_container_health_check.interval
-            timeout     = var.services["guest"].ecs_container_health_check.timeout
-            retries     = var.services["guest"].ecs_container_health_check.retries
-            startPeriod = var.services["guest"].ecs_container_health_check.startPeriod
-          }
-          depends_on = []
-        },
-        {
-          # n8n automation - required before API Gateway becomes available
+          # n8n automation - provides webhooks for AI service
           name                 = "n8n"
           image_repository_url = var.services["n8n"].ecs_container_image_repository_url
           image_tag            = var.services["n8n"].ecs_container_image_tag
@@ -600,7 +418,7 @@ module "ecs_server2" {
           image_repository_url = "docker.io/library/nginx"
           image_tag            = "1.27-alpine"
           cpu                  = 64
-          memory               = 128
+          memory               = 96
           essential            = true
           port_mappings = [
             {
@@ -656,9 +474,197 @@ nginx -g 'daemon off;'
 EOT
           ]
           depends_on = ["n8n"]
+        }
+
+      ]
+
+      target_groups = [
+        {
+          # n8n HTTP exposure via ALB
+          target_group_arn = module.alb.target_group_arns_map["n8n"]
+          container_name   = "n8n-proxy"
+          container_port   = 8088
+        }
+      ]
+    }
+  }
+
+  depends_on = [module.ec2]
+}
+
+# ECS Module - Server-2 (Guest + User + AI + API Gateway)
+# Deploys after server-1 to ensure service discovery endpoints are available
+module "ecs_server2" {
+  source = "./modules/ecs"
+
+  project_name             = var.project_name
+  aws_region               = var.aws_region
+  vpc_id                   = module.vpc.vpc_id
+  vpc_cidr                 = var.vpc_cidr
+  task_subnet_ids          = [module.vpc.private_subnet_id]
+  ecs_cluster_id           = module.ec2.ecs_cluster_arn
+  ecs_cluster_name         = module.ec2.ecs_cluster_name
+  alb_security_group_id    = module.alb.alb_sg_id
+  assign_public_ip         = false
+  desired_count            = 1
+  service_names            = ["server-2"]
+  service_discovery_domain = "${var.project_name}.${var.service_discovery_domain_suffix}"
+  service_dependencies     = {}
+  enable_auto_scaling      = var.enable_auto_scaling
+  enable_service_connect   = var.enable_service_connect
+
+  # Pass shared resources (same as server-1)
+  shared_log_group_name     = aws_cloudwatch_log_group.ecs_logs.name
+  shared_task_role_arn      = aws_iam_role.ecs_task_role.arn
+  shared_execution_role_arn = aws_iam_role.ecs_execution_role.arn
+  shared_task_sg_id         = aws_security_group.ecs_task_sg.id
+  # Use existing namespace created above
+  service_connect_namespace = var.enable_service_connect ? aws_service_discovery_private_dns_namespace.ecs_namespace[0].arn : null
+
+  service_connect_services = {
+    server-2 = [
+      {
+        # Publish guest-service to namespace
+        port_name      = var.services["guest"].ecs_service_connect_port_name
+        discovery_name = var.services["guest"].ecs_service_connect_discovery_name
+        client_aliases = [
+          {
+            dns_name = var.services["guest"].ecs_service_connect_dns_name
+            port     = var.services["guest"].ecs_container_port_mappings[0].container_port
+          }
+        ]
+      },
+      {
+        # Publish user microservice to namespace
+        port_name      = var.services["user"].ecs_service_connect_port_name
+        discovery_name = var.services["user"].ecs_service_connect_discovery_name
+        client_aliases = [
+          {
+            dns_name = var.services["user"].ecs_service_connect_dns_name
+            port     = var.services["user"].ecs_container_port_mappings[0].container_port
+          }
+        ]
+      },
+      {
+        # Publish AI microservice to namespace
+        port_name      = var.services["ai"].ecs_service_connect_port_name
+        discovery_name = var.services["ai"].ecs_service_connect_discovery_name
+        client_aliases = [
+          {
+            dns_name = var.services["ai"].ecs_service_connect_dns_name
+            port     = var.services["ai"].ecs_container_port_mappings[0].container_port
+          }
+        ]
+      },
+      {
+        # Publish API Gateway to namespace
+        port_name      = var.services["apigateway"].ecs_service_connect_port_name
+        discovery_name = var.services["apigateway"].ecs_service_connect_discovery_name
+        client_aliases = [
+          {
+            dns_name = var.services["apigateway"].ecs_service_connect_dns_name
+            port     = var.services["apigateway"].ecs_container_port_mappings[0].container_port
+          }
+        ]
+      }
+      # Note: RabbitMQ, Redis, and n8n auto-discovered via Service Connect namespace
+    ]
+  }
+
+  service_definitions = {
+    server-2 = {
+      task_cpu            = var.services["guest"].ecs_container_cpu + var.services["apigateway"].ecs_container_cpu + var.services["user"].ecs_container_cpu + var.services["ai"].ecs_container_cpu + 64
+      task_memory         = var.services["guest"].ecs_container_memory + var.services["apigateway"].ecs_container_memory + var.services["user"].ecs_container_memory + var.services["ai"].ecs_container_memory + 64
+      desired_count       = 1
+      assign_public_ip    = false
+      enable_auto_scaling = false
+      placement_constraints = [
+        {
+          type       = "memberOf"
+          expression = "attribute:service_group == server-2"
+        }
+      ]
+
+      volumes = []
+
+      containers = [
+        {
+          # Guest microservice - deployed first as dependency for API Gateway
+          name                 = "guest-microservice"
+          image_repository_url = var.services["guest"].ecs_container_image_repository_url
+          image_tag            = var.services["guest"].ecs_container_image_tag
+          cpu                  = var.services["guest"].ecs_container_cpu
+          memory               = var.services["guest"].ecs_container_memory
+          essential            = var.services["guest"].ecs_container_essential
+          port_mappings        = var.services["guest"].ecs_container_port_mappings
+          environment_variables = [
+            for env_var in var.services["guest"].ecs_environment_variables :
+            env_var
+          ]
+          health_check = {
+            command     = var.services["guest"].ecs_container_health_check.command
+            interval    = var.services["guest"].ecs_container_health_check.interval
+            timeout     = var.services["guest"].ecs_container_health_check.timeout
+            retries     = var.services["guest"].ecs_container_health_check.retries
+            startPeriod = var.services["guest"].ecs_container_health_check.startPeriod
+          }
+          depends_on = []
         },
         {
-          # API Gateway - depends on Guest microservice and n8n
+          # User microservice - consumes RabbitMQ/Redis from server-1
+          name                 = "user-microservice"
+          image_repository_url = var.services["user"].ecs_container_image_repository_url
+          image_tag            = var.services["user"].ecs_container_image_tag
+          cpu                  = var.services["user"].ecs_container_cpu
+          memory               = var.services["user"].ecs_container_memory
+          essential            = var.services["user"].ecs_container_essential
+          port_mappings        = var.services["user"].ecs_container_port_mappings
+          environment_variables = [
+            for env_var in var.services["user"].ecs_environment_variables :
+            env_var
+          ]
+          health_check = {
+            command     = var.services["user"].ecs_container_health_check.command
+            interval    = var.services["user"].ecs_container_health_check.interval
+            timeout     = var.services["user"].ecs_container_health_check.timeout
+            retries     = var.services["user"].ecs_container_health_check.retries
+            startPeriod = var.services["user"].ecs_container_health_check.startPeriod
+          }
+          depends_on = []
+        },
+        {
+          # AI microservice - relies on n8n service running on server-1
+          name                 = "ai-microservice"
+          image_repository_url = var.services["ai"].ecs_container_image_repository_url
+          image_tag            = var.services["ai"].ecs_container_image_tag
+          cpu                  = var.services["ai"].ecs_container_cpu
+          memory               = var.services["ai"].ecs_container_memory
+          essential            = var.services["ai"].ecs_container_essential
+          port_mappings        = var.services["ai"].ecs_container_port_mappings
+          environment_variables = concat(
+            [
+              for env_var in var.services.ai.ecs_environment_variables :
+              env_var
+              if env_var.name != "AiWebhook__Endpoint"
+            ],
+            [
+              {
+                name  = "AiWebhook__Endpoint"
+                value = local.ai_webhook_endpoint
+              }
+            ]
+          )
+          health_check = {
+            command     = var.services["ai"].ecs_container_health_check.command
+            interval    = var.services["ai"].ecs_container_health_check.interval
+            timeout     = var.services["ai"].ecs_container_health_check.timeout
+            retries     = var.services["ai"].ecs_container_health_check.retries
+            startPeriod = var.services["ai"].ecs_container_health_check.startPeriod
+          }
+          depends_on = []
+        },
+        {
+          # API Gateway - depends on Guest, User, and AI microservices
           name                 = "api-gateway"
           image_repository_url = var.services["apigateway"].ecs_container_image_repository_url
           image_tag            = var.services["apigateway"].ecs_container_image_tag
@@ -677,7 +683,7 @@ EOT
             retries     = var.services["apigateway"].ecs_container_health_check.retries
             startPeriod = var.services["apigateway"].ecs_container_health_check.startPeriod
           }
-          depends_on = ["guest-microservice", "n8n"]
+          depends_on = ["guest-microservice", "user-microservice", "ai-microservice"]
         }
       ]
 
@@ -687,12 +693,6 @@ EOT
           target_group_arn = module.alb.target_group_arns_map["apigateway"]
           container_name   = "api-gateway"
           container_port   = var.services["apigateway"].ecs_container_port_mappings[0].container_port
-        },
-        {
-          # n8n HTTP exposure via ALB
-          target_group_arn = module.alb.target_group_arns_map["n8n"]
-          container_name   = "n8n-proxy"
-          container_port   = 8088
         }
       ]
     }
