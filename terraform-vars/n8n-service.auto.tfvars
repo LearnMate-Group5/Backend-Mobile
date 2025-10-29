@@ -33,7 +33,7 @@ services = {
     ecs_container_image_repository_url = "docker.n8n.io/n8nio/n8n"
     ecs_container_image_tag            = "latest"
     ecs_container_cpu                  = 256
-    ecs_container_memory               = 512
+    ecs_container_memory               = 256
     ecs_container_essential            = true
     ecs_container_port_mappings = [
       {
@@ -58,7 +58,7 @@ services = {
       { name = "N8N_TEMPLATES_ENABLED", value = "false" },
       { name = "N8N_METRICS", value = "true" },
       { name = "QUEUE_HEALTH_CHECK_ACTIVE", value = "true" },
-      { name = "NODE_OPTIONS", value = "--max-old-space-size=512" }
+      { name = "NODE_OPTIONS", value = "--max-old-space-size=256" }
     ]
 
     ecs_container_health_check = {
