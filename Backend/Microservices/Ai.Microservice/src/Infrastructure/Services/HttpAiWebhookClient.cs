@@ -3,6 +3,7 @@ using System.IO;
 using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Application.Common.Interfaces;
@@ -47,7 +48,23 @@ public class HttpAiWebhookClient : IAiWebhookClient
             return new AiWebhookClientResponse(HttpStatusCode.InternalServerError, message, false);
         }
 
-        var requestUri = CreateRequestUri(_options.Endpoint);
+        Uri requestUri;
+        try
+        {
+            requestUri = CreateRequestUri(_options.Endpoint);
+        }
+        catch (Exception exception)
+        {
+            _logger.LogError(
+                exception,
+                "Invalid AI webhook endpoint configured: {Endpoint}",
+                _options.Endpoint);
+
+            return new AiWebhookClientResponse(
+                HttpStatusCode.InternalServerError,
+                "AI webhook endpoint is invalid.",
+                false);
+        }
 
         using var request = new HttpRequestMessage(HttpMethod.Post, requestUri);
         using var form = CreateFormContent(fileStream, fileName, contentType, userId);
@@ -105,7 +122,16 @@ public class HttpAiWebhookClient : IAiWebhookClient
             return absolute;
         }
 
-        return new Uri(endpoint, UriKind.Relative);
+        var endpointWithScheme = endpoint.Contains("://", StringComparison.Ordinal)
+            ? endpoint
+            : $"http://{endpoint}";
+
+        if (Uri.TryCreate(endpointWithScheme, UriKind.Absolute, out var absoluteWithScheme))
+        {
+            return absoluteWithScheme;
+        }
+
+        throw new InvalidOperationException($"Unable to create URI from endpoint value '{endpoint}'.");
     }
 
     private static MultipartFormDataContent CreateFormContent(
@@ -127,11 +153,13 @@ public class HttpAiWebhookClient : IAiWebhookClient
             streamContent.Headers.ContentType = MediaTypeHeaderValue.Parse(contentType);
         }
 
-        form.Add(streamContent, "file", normalizedFileName);
+        form.Add(streamContent, "File", normalizedFileName);
 
         if (!string.IsNullOrWhiteSpace(userId))
         {
-            form.Add(new StringContent(userId), "userId");
+            var userIdContent = new StringContent(userId, Encoding.UTF8);
+            userIdContent.Headers.ContentType = null;
+            form.Add(userIdContent, "userId");
         }
 
         return form;
