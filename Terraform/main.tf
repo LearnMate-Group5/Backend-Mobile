@@ -244,7 +244,7 @@ module "ecs_server1" {
   service_dependencies     = {}
   enable_auto_scaling      = var.enable_auto_scaling
   enable_service_connect   = var.enable_service_connect
-  wait_for_steady_state    = true
+  wait_for_steady_state    = true 
 
   # Pass shared resources
   shared_log_group_name     = aws_cloudwatch_log_group.ecs_logs.name
@@ -291,8 +291,8 @@ module "ecs_server1" {
 
   service_definitions = {
     server-1 = {
-      task_cpu         = var.services["rabbitmq"].ecs_container_cpu + var.services["redis"].ecs_container_cpu + var.services["n8n"].ecs_container_cpu + 64
-      task_memory      = var.services["rabbitmq"].ecs_container_memory + var.services["redis"].ecs_container_memory + var.services["n8n"].ecs_container_memory + 64
+      task_cpu         = lookup(var.services["n8n"], "ecs_task_cpu", var.services["rabbitmq"].ecs_container_cpu + var.services["redis"].ecs_container_cpu + var.services["n8n"].ecs_container_cpu + 64)
+      task_memory      = lookup(var.services["n8n"], "ecs_task_memory", var.services["rabbitmq"].ecs_container_memory + var.services["redis"].ecs_container_memory + var.services["n8n"].ecs_container_memory + 64)
       desired_count    = 1
       assign_public_ip = false
       placement_constraints = [
