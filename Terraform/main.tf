@@ -2,7 +2,6 @@ locals {
   service_discovery_domain     = "${var.project_name}.${var.service_discovery_domain_suffix}"
   rabbitmq_host                = "rabbitmq"
   redis_host                   = "redis"
-  guest_service_host           = "guest-service"
   user_service_host            = "user-service"
   n8n_service_connect_host     = var.services["n8n"].ecs_service_connect_dns_name
   n8n_service_port             = var.services.n8n.ecs_container_port_mappings[0].container_port
@@ -285,7 +284,7 @@ module "ecs_server1" {
           }
         ]
       }
-      # Note: API Gateway, Guest, User, and AI services auto-discovered via Service Connect namespace
+      # Note: API Gateway, User, and AI services auto-discovered via Service Connect namespace
     ]
   }
 
@@ -493,7 +492,7 @@ EOT
   depends_on = [module.ec2]
 }
 
-# ECS Module - Server-2 (Guest + User + AI + API Gateway)
+# ECS Module - Server-2 (User + AI + API Gateway)
 # Deploys after server-1 to ensure service discovery endpoints are available
 module "ecs_server2" {
   source = "./modules/ecs"
@@ -526,17 +525,6 @@ module "ecs_server2" {
   service_connect_services = {
     server-2 = [
       {
-        # Publish guest-service to namespace
-        port_name      = var.services["guest"].ecs_service_connect_port_name
-        discovery_name = var.services["guest"].ecs_service_connect_discovery_name
-        client_aliases = [
-          {
-            dns_name = var.services["guest"].ecs_service_connect_dns_name
-            port     = var.services["guest"].ecs_container_port_mappings[0].container_port
-          }
-        ]
-      },
-      {
         # Publish user microservice to namespace
         port_name      = var.services["user"].ecs_service_connect_port_name
         discovery_name = var.services["user"].ecs_service_connect_discovery_name
@@ -544,6 +532,17 @@ module "ecs_server2" {
           {
             dns_name = var.services["user"].ecs_service_connect_dns_name
             port     = var.services["user"].ecs_container_port_mappings[0].container_port
+          }
+        ]
+      },
+      {
+        # Publish book microservice to namespace
+        port_name      = var.services["book"].ecs_service_connect_port_name
+        discovery_name = var.services["book"].ecs_service_connect_discovery_name
+        client_aliases = [
+          {
+            dns_name = var.services["book"].ecs_service_connect_dns_name
+            port     = var.services["book"].ecs_container_port_mappings[0].container_port
           }
         ]
       },
@@ -575,8 +574,8 @@ module "ecs_server2" {
 
   service_definitions = {
     server-2 = {
-      task_cpu            = var.services["guest"].ecs_container_cpu + var.services["apigateway"].ecs_container_cpu + var.services["user"].ecs_container_cpu + var.services["ai"].ecs_container_cpu + 64
-      task_memory         = var.services["guest"].ecs_container_memory + var.services["apigateway"].ecs_container_memory + var.services["user"].ecs_container_memory + var.services["ai"].ecs_container_memory + 64
+      task_cpu            = var.services["apigateway"].ecs_container_cpu + var.services["user"].ecs_container_cpu + var.services["ai"].ecs_container_cpu + var.services["book"].ecs_container_cpu + 64
+      task_memory         = var.services["apigateway"].ecs_container_memory + var.services["user"].ecs_container_memory + var.services["ai"].ecs_container_memory + var.services["book"].ecs_container_memory + 64
       desired_count       = 1
       assign_public_ip    = false
       enable_auto_scaling = false
@@ -590,28 +589,6 @@ module "ecs_server2" {
       volumes = []
 
       containers = [
-        {
-          # Guest microservice - deployed first as dependency for API Gateway
-          name                 = "guest-microservice"
-          image_repository_url = var.services["guest"].ecs_container_image_repository_url
-          image_tag            = var.services["guest"].ecs_container_image_tag
-          cpu                  = var.services["guest"].ecs_container_cpu
-          memory               = var.services["guest"].ecs_container_memory
-          essential            = var.services["guest"].ecs_container_essential
-          port_mappings        = var.services["guest"].ecs_container_port_mappings
-          environment_variables = [
-            for env_var in var.services["guest"].ecs_environment_variables :
-            env_var
-          ]
-          health_check = {
-            command     = var.services["guest"].ecs_container_health_check.command
-            interval    = var.services["guest"].ecs_container_health_check.interval
-            timeout     = var.services["guest"].ecs_container_health_check.timeout
-            retries     = var.services["guest"].ecs_container_health_check.retries
-            startPeriod = var.services["guest"].ecs_container_health_check.startPeriod
-          }
-          depends_on = []
-        },
         {
           # User microservice - consumes RabbitMQ/Redis from server-1
           name                 = "user-microservice"
@@ -631,6 +608,28 @@ module "ecs_server2" {
             timeout     = var.services["user"].ecs_container_health_check.timeout
             retries     = var.services["user"].ecs_container_health_check.retries
             startPeriod = var.services["user"].ecs_container_health_check.startPeriod
+          }
+          depends_on = []
+        },
+        {
+          # User microservice - consumes RabbitMQ/Redis from server-1
+          name                 = "book-microservice"
+          image_repository_url = var.services["book"].ecs_container_image_repository_url
+          image_tag            = var.services["book"].ecs_container_image_tag
+          cpu                  = var.services["book"].ecs_container_cpu
+          memory               = var.services["book"].ecs_container_memory
+          essential            = var.services["book"].ecs_container_essential
+          port_mappings        = var.services["book"].ecs_container_port_mappings
+          environment_variables = [
+            for env_var in var.services["book"].ecs_environment_variables :
+            env_var
+          ]
+          health_check = {
+            command     = var.services["book"].ecs_container_health_check.command
+            interval    = var.services["book"].ecs_container_health_check.interval
+            timeout     = var.services["book"].ecs_container_health_check.timeout
+            retries     = var.services["book"].ecs_container_health_check.retries
+            startPeriod = var.services["book"].ecs_container_health_check.startPeriod
           }
           depends_on = []
         },
@@ -666,7 +665,7 @@ module "ecs_server2" {
           depends_on = []
         },
         {
-          # API Gateway - depends on Guest, User, and AI microservices
+          # API Gateway - depends on User and AI microservices
           name                 = "api-gateway"
           image_repository_url = var.services["apigateway"].ecs_container_image_repository_url
           image_tag            = var.services["apigateway"].ecs_container_image_tag
@@ -685,7 +684,7 @@ module "ecs_server2" {
             retries     = var.services["apigateway"].ecs_container_health_check.retries
             startPeriod = var.services["apigateway"].ecs_container_health_check.startPeriod
           }
-          depends_on = ["guest-microservice", "user-microservice", "ai-microservice"]
+          depends_on = ["user-microservice", "ai-microservice", "book-microservice"]
         }
       ]
 
