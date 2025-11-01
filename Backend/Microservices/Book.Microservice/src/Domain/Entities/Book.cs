@@ -28,4 +28,8 @@ public class Book
     public ICollection<BookChapter> Chapters { get; set; } = new List<BookChapter>();
 
     public ICollection<BookCategory> BookCategories { get; set; } = new List<BookCategory>();
+
+    public ICollection<BookLike> Likes { get; set; } = new List<BookLike>();
+
+    public ICollection<BookView> Views { get; set; } = new List<BookView>();
 }

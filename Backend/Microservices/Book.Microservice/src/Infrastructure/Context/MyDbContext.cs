@@ -19,6 +19,8 @@ public class MyDbContext : DbContext
     public virtual DbSet<BookChapter> BookChapters { get; set; } = null!;
     public virtual DbSet<Category> Categories { get; set; } = null!;
     public virtual DbSet<BookCategory> BookCategories { get; set; } = null!;
+    public virtual DbSet<BookLike> BookLikes { get; set; } = null!;
+    public virtual DbSet<BookView> BookViews { get; set; } = null!;
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {
@@ -101,6 +103,16 @@ public class MyDbContext : DbContext
             entity.HasMany(e => e.BookCategories)
                 .WithOne(bookCategory => bookCategory.Book)
                 .HasForeignKey(bookCategory => bookCategory.BookId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasMany(e => e.Likes)
+                .WithOne(like => like.Book)
+                .HasForeignKey(like => like.BookId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasMany(e => e.Views)
+                .WithOne(view => view.Book)
+                .HasForeignKey(view => view.BookId)
                 .OnDelete(DeleteBehavior.Cascade);
         });
 
@@ -193,6 +205,70 @@ public class MyDbContext : DbContext
             entity.HasIndex(e => new { e.BookId, e.PageIndex })
                 .IsUnique()
                 .HasDatabaseName("ux_book_chapters_page_index");
+        });
+
+        modelBuilder.Entity<BookLike>(entity =>
+        {
+            entity.ToTable("book_likes");
+
+            entity.HasKey(e => e.BookLikeId);
+
+            entity.Property(e => e.BookLikeId)
+                .HasColumnName("book_like_id");
+
+            entity.Property(e => e.BookId)
+                .HasColumnName("book_id")
+                .IsRequired();
+
+            entity.Property(e => e.UserId)
+                .HasColumnName("user_id")
+                .HasMaxLength(128)
+                .IsRequired();
+
+            entity.Property(e => e.CreatedAt)
+                .HasColumnName("created_at")
+                .HasColumnType("timestamp with time zone")
+                .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+            entity.HasOne(e => e.Book)
+                .WithMany(book => book.Likes)
+                .HasForeignKey(e => e.BookId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasIndex(e => new { e.BookId, e.UserId })
+                .IsUnique()
+                .HasDatabaseName("ux_book_likes_book_user");
+        });
+
+        modelBuilder.Entity<BookView>(entity =>
+        {
+            entity.ToTable("book_views");
+
+            entity.HasKey(e => e.BookViewId);
+
+            entity.Property(e => e.BookViewId)
+                .HasColumnName("book_view_id");
+
+            entity.Property(e => e.BookId)
+                .HasColumnName("book_id")
+                .IsRequired();
+
+            entity.Property(e => e.ViewerId)
+                .HasColumnName("viewer_id")
+                .HasMaxLength(128);
+
+            entity.Property(e => e.ViewedAt)
+                .HasColumnName("viewed_at")
+                .HasColumnType("timestamp with time zone")
+                .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+            entity.HasOne(e => e.Book)
+                .WithMany(book => book.Views)
+                .HasForeignKey(e => e.BookId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasIndex(e => new { e.BookId, e.ViewedAt })
+                .HasDatabaseName("ix_book_views_book_viewed_at");
         });
     }
 }

@@ -56,7 +56,7 @@ services = {
       { name = "REDIS_PASSWORD", value = "0Kg04Rs05!" },
       { name = "REDIS_PORT", value = "6379" },
       { name = "Jwt__SecretKey", value = "YourSuperSecretKeyThatIsAtLeast32CharactersLong!@#$%^&*()" },
-      { name = "Jwt__Issuer", value = "BookMicroservice" },
+      { name = "Jwt__Issuer", value = "UserMicroservice" },
       { name = "Jwt__Audience", value = "MicroservicesApp" },
       { name = "Jwt__ExpirationMinutes", value = "60" }
     ]

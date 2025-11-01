@@ -25,6 +25,8 @@ public class BookRepository : IBookRepository
             .AsNoTracking()
             .Include(book => book.BookCategories)
                 .ThenInclude(bookCategory => bookCategory.Category)
+            .Include(book => book.Likes)
+            .Include(book => book.Views)
             .OrderBy(book => book.Title)
             .ToListAsync(cancellationToken);
     }
@@ -35,6 +37,8 @@ public class BookRepository : IBookRepository
             .AsNoTracking()
             .Include(book => book.BookCategories)
                 .ThenInclude(bookCategory => bookCategory.Category)
+            .Include(book => book.Likes)
+            .Include(book => book.Views)
             .FirstOrDefaultAsync(book => book.BookId == bookId, cancellationToken);
     }
 
@@ -133,6 +137,46 @@ public class BookRepository : IBookRepository
                     (!excludingBookId.HasValue || book.BookId != excludingBookId.Value) &&
                     EF.Functions.ILike(book.Title, normalizedTitle),
                 cancellationToken);
+    }
+
+    public async Task AddViewAsync(BookView view, CancellationToken cancellationToken)
+    {
+        await _context.BookViews.AddAsync(view, cancellationToken);
+        await _context.SaveChangesAsync(cancellationToken);
+    }
+
+    public async Task<bool> HasUserViewedAsync(Guid bookId, string viewerId, CancellationToken cancellationToken)
+    {
+        return await _context.BookViews
+            .AsNoTracking()
+            .AnyAsync(view => view.BookId == bookId && view.ViewerId == viewerId, cancellationToken);
+    }
+
+    public async Task<bool> HasUserLikedAsync(Guid bookId, string userId, CancellationToken cancellationToken)
+    {
+        return await _context.BookLikes
+            .AsNoTracking()
+            .AnyAsync(like => like.BookId == bookId && like.UserId == userId, cancellationToken);
+    }
+
+    public async Task AddLikeAsync(BookLike like, CancellationToken cancellationToken)
+    {
+        await _context.BookLikes.AddAsync(like, cancellationToken);
+        await _context.SaveChangesAsync(cancellationToken);
+    }
+
+    public async Task<int> GetViewCountAsync(Guid bookId, CancellationToken cancellationToken)
+    {
+        return await _context.BookViews
+            .AsNoTracking()
+            .CountAsync(view => view.BookId == bookId, cancellationToken);
+    }
+
+    public async Task<int> GetLikeCountAsync(Guid bookId, CancellationToken cancellationToken)
+    {
+        return await _context.BookLikes
+            .AsNoTracking()
+            .CountAsync(like => like.BookId == bookId, cancellationToken);
     }
 
     private async Task<List<Category>> GetOrCreateCategoriesAsync(

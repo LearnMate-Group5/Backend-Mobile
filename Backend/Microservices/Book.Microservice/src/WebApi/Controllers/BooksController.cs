@@ -190,6 +190,111 @@ public sealed class BooksController : ApiController
         return Ok(new { message = "Book deleted successfully." });
     }
 
+    [HttpPost("{bookId:guid}/views")]
+    [Authorize("Admin", "Staff", "User")]
+    public async Task<IActionResult> AddBookViewAsync(
+        [FromRoute] Guid bookId,
+        CancellationToken cancellationToken = default)
+    {
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (string.IsNullOrWhiteSpace(userId))
+        {
+            return Unauthorized("User context is missing.");
+        }
+
+        var command = new AddBookViewCommand(bookId, userId);
+        var result = await _mediator.Send(command, cancellationToken);
+
+        if (result.IsFailure)
+        {
+            if (result.Error.Code == "Book.NotFound")
+            {
+                return NotFound(new { message = result.Error.Description });
+            }
+
+            return HandleFailure(result);
+        }
+
+        return Ok(result.Value);
+    }
+
+    [HttpPost("{bookId:guid}/likes")]
+    [Authorize("Admin", "Staff", "User")]
+    public async Task<IActionResult> AddBookLikeAsync(
+        [FromRoute] Guid bookId,
+        CancellationToken cancellationToken = default)
+    {
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (string.IsNullOrWhiteSpace(userId))
+        {
+            return Unauthorized("User context is missing.");
+        }
+
+        var command = new AddBookLikeCommand(bookId, userId);
+        var result = await _mediator.Send(command, cancellationToken);
+
+        if (result.IsFailure)
+        {
+            if (result.Error.Code == "Book.NotFound")
+            {
+                return NotFound(new { message = result.Error.Description });
+            }
+
+            if (result.Error.Code == "Book.InvalidOperation")
+            {
+                return Conflict(new { message = result.Error.Description });
+            }
+
+            return HandleFailure(result);
+        }
+
+        return Ok(result.Value);
+    }
+
+    [HttpGet("{bookId:guid}/views")]
+    [Authorize("Admin", "Staff", "User")]
+    public async Task<IActionResult> GetBookViewCountAsync(
+        [FromRoute] Guid bookId,
+        CancellationToken cancellationToken = default)
+    {
+        var query = new GetBookViewCountQuery(bookId);
+        var result = await _mediator.Send(query, cancellationToken);
+
+        if (result.IsFailure)
+        {
+            if (result.Error.Code == "Book.NotFound")
+            {
+                return NotFound(new { message = result.Error.Description });
+            }
+
+            return HandleFailure(result);
+        }
+
+        return Ok(new { bookId, viewCount = result.Value });
+    }
+
+    [HttpGet("{bookId:guid}/likes")]
+    [Authorize("Admin", "Staff", "User")]
+    public async Task<IActionResult> GetBookLikeCountAsync(
+        [FromRoute] Guid bookId,
+        CancellationToken cancellationToken = default)
+    {
+        var query = new GetBookLikeCountQuery(bookId);
+        var result = await _mediator.Send(query, cancellationToken);
+
+        if (result.IsFailure)
+        {
+            if (result.Error.Code == "Book.NotFound")
+            {
+                return NotFound(new { message = result.Error.Description });
+            }
+
+            return HandleFailure(result);
+        }
+
+        return Ok(new { bookId, likeCount = result.Value });
+    }
+
     private static async Task<string?> ReadFileAsBase64Async(IFormFile? file, CancellationToken cancellationToken)
     {
         if (file is null || file.Length == 0)
