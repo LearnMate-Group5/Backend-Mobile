@@ -13,7 +13,7 @@ COPY ${SERVICE_NAME}/src/Domain/Domain.csproj ./${SERVICE_NAME}/src/Domain/
 COPY ${SERVICE_NAME}/test/test.csproj ./${SERVICE_NAME}/test/
 COPY SharedLibrary/SharedLibrary.csproj ./SharedLibrary/
 
-RUN dotnet restore ${SERVICE_NAME}/src/WebApi/WebApi.csproj
+RUN dotnet restore --disable-parallel ${SERVICE_NAME}/src/WebApi/WebApi.csproj
 
 COPY ${SERVICE_NAME}/src/ ./${SERVICE_NAME}/src/
 COPY SharedLibrary/ ./SharedLibrary/

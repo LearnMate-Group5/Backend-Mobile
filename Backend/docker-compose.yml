@@ -1,35 +1,4 @@
 services:
-  guest-microservice:
-    build:
-      context: ./Microservices
-      dockerfile: ./Guest.Microservice/Dockerfile
-      args:
-        SERVICE_NAME: Guest.Microservice
-    image: guest-microservice
-    container_name: guest-microservice
-    environment:
-      ASPNETCORE_ENVIRONMENT: Production
-      DATABASE_HOST: 
-      DATABASE_PORT: 
-      DATABASE_NAME: 
-      DATABASE_USERNAME: YOUR_USERNAME
-      DATABASE_PASSWORD: YOUR_PASSWORD
-      ASPNETCORE_URLS: http://+:5001
-      RABBITMQ_HOST: rabbit-mq
-      RABBITMQ_PORT: 5672
-      RABBITMQ_USERNAME: YOUR_USERNAME
-      RABBITMQ_PASSWORD: YOUR_PASSWORD
-      REDIS_HOST: redis
-      REDIS_PASSWORD: YOUR_PASSWORD
-      REDIS_PORT: 6379
-    depends_on:
-      rabbit-mq:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-    networks:
-      - app-network
-
   user-microservice:
     build:
       context: ./Microservices
@@ -70,6 +39,30 @@ services:
     networks:
       - app-network
 
+  book-microservice:
+    build:
+      context: ./Microservices
+      dockerfile: ./Book.Microservice/dockerfile
+      args:
+        SERVICE_NAME: Book.Microservice
+    image: book-microservice
+    container_name: book-microservice
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      DATABASE_HOST: 
+      DATABASE_PORT: 
+      DATABASE_NAME: 
+      DATABASE_USERNAME: YOUR_USERNAME
+      DATABASE_PASSWORD: YOUR_PASSWORD
+      ASPNETCORE_URLS: http://+:5004
+      # JWT Configuration
+      Jwt__SecretKey: YourSuperSecretKeyThatIsAtLeast32CharactersLong!@#$%^&*()
+      Jwt__Issuer: UserMicroservice
+      Jwt__Audience: MicroservicesApp
+      Jwt__ExpirationMinutes: 60
+    networks:
+      - app-network
+
   api-gateway:
     build:
       context: ./Microservices
@@ -83,8 +76,8 @@ services:
       ASPNETCORE_URLS: http://+:8080
       USER_MICROSERVICE_HOST: user-microservice #example: user-microservice (the docker service name)
       USER_MICROSERVICE_PORT: 5002
-      GUEST_MICROSERVICE_HOST: guest-microservice
-      GUEST_MICROSERVICE_PORT: 5001
+      BOOK_MICROSERVICE_HOST: book-microservice
+      BOOK_MICROSERVICE_PORT: 5004
       # JWT Configuration
       Jwt__SecretKey: YourSuperSecretKeyThatIsAtLeast32CharactersLong!@#$%^&*()
       Jwt__Issuer: UserMicroservice

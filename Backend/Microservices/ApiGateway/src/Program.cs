@@ -16,7 +16,21 @@ DotNetEnv.Env.Load();
 var builder = WebApplication.CreateBuilder(args);
 
 string GetEnv(string key, string def) => Environment.GetEnvironmentVariable(key) ?? def;
-int GetEnvInt(string key, int def) => int.TryParse(Environment.GetEnvironmentVariable(key), out var v) ? v : def;
+var runningInContainer = string.Equals(
+    Environment.GetEnvironmentVariable("DOTNET_RUNNING_IN_CONTAINER"),
+    "true",
+    StringComparison.OrdinalIgnoreCase);
+
+string ResolveHost(string? envHost, string containerDefault)
+{
+    if (!string.IsNullOrWhiteSpace(envHost))
+    {
+        return envHost;
+    }
+
+    return runningInContainer ? containerDefault : "localhost";
+}
+
 const string CorsPolicyName = "AllowFrontend";
 var configuredOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>();
 var allowedCorsOrigins = (configuredOrigins ?? Array.Empty<string>())
@@ -108,10 +122,34 @@ void AddRoute(string prefix, string serviceSegment, string host, int port)
     });
 }
 
+int ResolvePort(string? envPort, int containerDefault, int localDefault)
+{
+    if (int.TryParse(envPort, out var parsed))
+    {
+        return parsed;
+    }
+
+    return runningInContainer ? containerDefault : localDefault;
+}
+
 var defaultServices = new[]
 {
-    new { Prefix = "USER",  Service = "User",  Host = "user-microservice",  Port = 5002 },
-    new { Prefix = "GUEST", Service = "Guest", Host = "guest-microservice", Port = 5001 }
+    new
+    {
+        Prefix = "USER",
+        Service = "User",
+        ContainerHost = "user-microservice",
+        ContainerPort = 5002,
+        LocalPort = 5002
+    },
+    new
+    {
+        Prefix = "BOOK",
+        Service = "Book",
+        ContainerHost = "book-microservice",
+        ContainerPort = 5004,
+        LocalPort = 5084
+    }
 };
 
 var addedServices = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -120,8 +158,8 @@ foreach (var s in defaultServices)
 {
     var envHost = Environment.GetEnvironmentVariable($"{s.Prefix}_MICROSERVICE_HOST");
     var envPortStr = Environment.GetEnvironmentVariable($"{s.Prefix}_MICROSERVICE_PORT");
-    var host = string.IsNullOrWhiteSpace(envHost) ? s.Host : envHost;
-    var port = int.TryParse(envPortStr, out var p) ? p : s.Port;
+    var host = ResolveHost(envHost, s.ContainerHost);
+    var port = ResolvePort(envPortStr, s.ContainerPort, s.LocalPort);
 
     AddRoute(s.Prefix, s.Service, host, port);
     addedServices.Add(s.Service);
@@ -145,8 +183,9 @@ foreach (var prefix in prefixes)
     var serviceSegment = ToServiceSegment(prefix);
     if (addedServices.Contains(serviceSegment)) continue;
 
-    var host = GetEnv($"{prefix}_MICROSERVICE_HOST", $"{prefix.ToLowerInvariant()}-microservice");
-    var port = GetEnvInt($"{prefix}_MICROSERVICE_PORT", 80);
+    var envHost = Environment.GetEnvironmentVariable($"{prefix}_MICROSERVICE_HOST");
+    var host = ResolveHost(envHost, $"{prefix.ToLowerInvariant()}-microservice");
+    var port = ResolvePort(Environment.GetEnvironmentVariable($"{prefix}_MICROSERVICE_PORT"), 80, 80);
 
     AddRoute(prefix, serviceSegment, host, port);
     addedServices.Add(serviceSegment);
@@ -168,8 +207,8 @@ foreach (var s in defaultServices)
 {
     var envHost = Environment.GetEnvironmentVariable($"{s.Prefix}_MICROSERVICE_HOST");
     var envPortStr = Environment.GetEnvironmentVariable($"{s.Prefix}_MICROSERVICE_PORT");
-    var host = string.IsNullOrWhiteSpace(envHost) ? s.Host : envHost;
-    var port = int.TryParse(envPortStr, out var p) ? p : s.Port;
+    var host = ResolveHost(envHost, s.ContainerHost);
+    var port = ResolvePort(envPortStr, s.ContainerPort, s.LocalPort);
 
     var key = s.Prefix.ToLowerInvariant();
     var name = $"{s.Service} API";
@@ -184,8 +223,9 @@ foreach (var prefix in prefixes)
     var serviceSegment = ToServiceSegment(prefix);
     if (addedSwaggerServices.Contains(serviceSegment)) continue;
 
-    var host = GetEnv($"{prefix}_MICROSERVICE_HOST", $"{prefix.ToLowerInvariant()}-microservice");
-    var port = GetEnvInt($"{prefix}_MICROSERVICE_PORT", 80);
+    var envHost = Environment.GetEnvironmentVariable($"{prefix}_MICROSERVICE_HOST");
+    var host = ResolveHost(envHost, $"{prefix.ToLowerInvariant()}-microservice");
+    var port = ResolvePort(Environment.GetEnvironmentVariable($"{prefix}_MICROSERVICE_PORT"), 80, 80);
 
     var key = prefix.ToLowerInvariant();
     var name = $"{serviceSegment} API";
