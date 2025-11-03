@@ -149,6 +149,14 @@ var defaultServices = new[]
         ContainerHost = "book-microservice",
         ContainerPort = 5004,
         LocalPort = 5084
+    },
+    new
+    {
+        Prefix = "SUBSCRIPTION",
+        Service = "Subscription",
+        ContainerHost = "subscription-microservice",
+        ContainerPort = 5005,
+        LocalPort = 5096
     }
 };
 

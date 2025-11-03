@@ -63,6 +63,30 @@ services:
     networks:
       - app-network
 
+  subscription-microservice:
+    build:
+      context: ./Microservices
+      dockerfile: ./Subscription.Microservice/dockerfile
+      args:
+        SERVICE_NAME: Subscription.Microservice
+    image: subscription-microservice
+    container_name: subscription-microservice
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      DATABASE_HOST:
+      DATABASE_PORT:
+      DATABASE_NAME:
+      DATABASE_USERNAME: YOUR_USERNAME
+      DATABASE_PASSWORD: YOUR_PASSWORD
+      ASPNETCORE_URLS: http://+:5005
+      # JWT Configuration
+      Jwt__SecretKey: YourSuperSecretKeyThatIsAtLeast32CharactersLong!@#$%^&*()
+      Jwt__Issuer: UserMicroservice
+      Jwt__Audience: MicroservicesApp
+      Jwt__ExpirationMinutes: 60
+    networks:
+      - app-network
+
   api-gateway:
     build:
       context: ./Microservices
@@ -78,6 +102,8 @@ services:
       USER_MICROSERVICE_PORT: 5002
       BOOK_MICROSERVICE_HOST: book-microservice
       BOOK_MICROSERVICE_PORT: 5004
+      SUBSCRIPTION_MICROSERVICE_HOST: subscription-microservice
+      SUBSCRIPTION_MICROSERVICE_PORT: 5005
       # JWT Configuration
       Jwt__SecretKey: YourSuperSecretKeyThatIsAtLeast32CharactersLong!@#$%^&*()
       Jwt__Issuer: UserMicroservice
