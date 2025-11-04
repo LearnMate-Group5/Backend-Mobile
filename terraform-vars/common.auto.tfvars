@@ -1,7 +1,7 @@
 # Common Infrastructure Variables
 project_name = "chooy"
-aws_region   = "us-east-1"
-region       = "us-east-1"
+aws_region   = "ap-southeast-1"
+region       = "ap-southeast-1"
 
 # VPC Configuration
 vpc_cidr            = "10.0.0.0/16"
