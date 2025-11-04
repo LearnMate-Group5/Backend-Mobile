@@ -95,13 +95,10 @@ module "ec2" {
       user_data_extra     = <<-EOF
         mkdir -p /var/lib/${var.project_name}/rabbitmq
         mkdir -p /var/lib/${var.project_name}/redis
-        mkdir -p /var/lib/${var.project_name}/n8n
         chown 999:999 /var/lib/${var.project_name}/rabbitmq || true
         chown 999:999 /var/lib/${var.project_name}/redis || true
-        chown 1000:1000 /var/lib/${var.project_name}/n8n || true
         chmod 0775 /var/lib/${var.project_name}/rabbitmq || chmod 0777 /var/lib/${var.project_name}/rabbitmq
         chmod 0775 /var/lib/${var.project_name}/redis || chmod 0777 /var/lib/${var.project_name}/redis
-        chmod 0775 /var/lib/${var.project_name}/n8n || chmod 0777 /var/lib/${var.project_name}/n8n
       EOF
     }
     server-2 = {
@@ -309,10 +306,6 @@ module "ecs_server1" {
         {
           name      = "redis-data"
           host_path = "/var/lib/${var.project_name}/redis"
-        },
-        {
-          name      = "n8n-data"
-          host_path = "/var/lib/${var.project_name}/n8n"
         }
       ]
 
@@ -404,12 +397,7 @@ module "ecs_server1" {
             retries     = var.services["n8n"].ecs_container_health_check.retries
             startPeriod = var.services["n8n"].ecs_container_health_check.startPeriod
           }
-          mount_points = [
-            {
-              source_volume  = "n8n-data"
-              container_path = "/home/node/.n8n"
-            }
-          ]
+          mount_points = []
           depends_on = []
         },
         {
