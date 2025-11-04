@@ -536,6 +536,17 @@ module "ecs_server2" {
         ]
       },
       {
+        # Publish subscription microservice to namespace
+        port_name      = var.services["subscription"].ecs_service_connect_port_name
+        discovery_name = var.services["subscription"].ecs_service_connect_discovery_name
+        client_aliases = [
+          {
+            dns_name = var.services["subscription"].ecs_service_connect_dns_name
+            port     = var.services["subscription"].ecs_container_port_mappings[0].container_port
+          }
+        ]
+      },
+      {
         # Publish book microservice to namespace
         port_name      = var.services["book"].ecs_service_connect_port_name
         discovery_name = var.services["book"].ecs_service_connect_discovery_name
