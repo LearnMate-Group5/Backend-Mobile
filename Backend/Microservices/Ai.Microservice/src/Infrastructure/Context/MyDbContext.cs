@@ -132,7 +132,8 @@ public class MyDbContext : DbContext
             entity.HasKey(e => e.Id);
 
             entity.Property(e => e.Id)
-                .HasColumnName("id");
+                .HasColumnName("id")
+                .HasDefaultValueSql("gen_random_uuid()");
 
             entity.Property(e => e.UserId)
                 .HasMaxLength(128)
@@ -141,6 +142,10 @@ public class MyDbContext : DbContext
             entity.Property(e => e.UniqueId)
                 .HasMaxLength(255)
                 .HasColumnName("unique_id");
+
+            entity.Property(e => e.Link)
+                .HasMaxLength(2048)
+                .HasColumnName("link");
 
             entity.Property(e => e.CreatedDate)
                 .HasColumnName("created_date")
