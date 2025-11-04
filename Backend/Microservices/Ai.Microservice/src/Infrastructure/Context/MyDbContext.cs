@@ -138,9 +138,9 @@ public class MyDbContext : DbContext
                 .HasMaxLength(128)
                 .HasColumnName("user_id");
 
-            entity.Property(e => e.Link)
-                .HasMaxLength(2048)
-                .HasColumnName("link");
+            entity.Property(e => e.UniqueId)
+                .HasMaxLength(255)
+                .HasColumnName("unique_id");
 
             entity.Property(e => e.CreatedDate)
                 .HasColumnName("created_date")
@@ -149,6 +149,10 @@ public class MyDbContext : DbContext
 
             entity.HasIndex(e => e.UserId)
                 .HasDatabaseName("idx_text_to_speech_links_user_id");
+
+            entity.HasIndex(e => e.UniqueId)
+                .IsUnique()
+                .HasDatabaseName("idx_text_to_speech_links_unique_id");
         });
 
     }
