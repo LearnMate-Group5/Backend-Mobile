@@ -1,0 +1,107 @@
+{
+  "name": "AI-text-to-speech",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "text-to-speech",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "11534012-353e-4ef1-8c3c-f7999c1a14b6",
+      "name": "Webhook",
+      "webhookId": "88dc9f9e-7c8e-4e69-86a0-f69925cbc1fc"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.fpt.ai/hmi/tts/v5",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "api-key",
+              "value": "CLxfQ74L5q2fJeq4hs8wbrJyvSE7pKW8"
+            },
+            {
+              "name": "voice",
+              "value": "linhsan"
+            },
+            {
+              "name": "callback_url",
+              "value": "=http://chooy-alb-2059826175.us-east-1.elb.amazonaws.com/n8n/webhook/0402bbb8-a391-4ef7-a9a0-dfbf036e4668/text-to-speech-callback/{{ $json.body.userid }}/{{ $json.body.uniqueid }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "text/plain; charset=utf-8",
+        "body": "={{ $json.body.text }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        208,
+        0
+      ],
+      "id": "d923fcfd-2a3d-4c2f-9484-f6d187e8b973",
+      "name": "HTTP Request"
+    },
+    {
+      "parameters": {
+        "respondWith": "allIncomingItems",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        416,
+        0
+      ],
+      "id": "58782c1e-09ce-4967-872d-0186713dffaf",
+      "name": "Respond to Webhook"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "b476c0ee-a54d-4d99-9d70-4362ffb45220",
+  "meta": {
+    "instanceId": "f83e7fb18ba493e7d1930aa233c8f796a268414b4733948e376c4478d3b73a3a"
+  },
+  "id": "Kdgf7Rk1r2n205n2",
+  "tags": []
+}
