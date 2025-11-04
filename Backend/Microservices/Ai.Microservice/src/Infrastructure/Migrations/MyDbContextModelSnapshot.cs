@@ -139,11 +139,11 @@ namespace Infrastructure.Migrations
                         .HasColumnName("created_date")
                         .HasDefaultValueSql("CURRENT_TIMESTAMP");
 
-                    b.Property<string>("Link")
+                    b.Property<string>("UniqueId")
                         .IsRequired()
-                        .HasMaxLength(2048)
-                        .HasColumnType("character varying(2048)")
-                        .HasColumnName("link");
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)")
+                        .HasColumnName("unique_id");
 
                     b.Property<string>("UserId")
                         .IsRequired()
@@ -152,6 +152,10 @@ namespace Infrastructure.Migrations
                         .HasColumnName("user_id");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("UniqueId")
+                        .IsUnique()
+                        .HasDatabaseName("idx_text_to_speech_links_unique_id");
 
                     b.HasIndex("UserId")
                         .HasDatabaseName("idx_text_to_speech_links_user_id");
