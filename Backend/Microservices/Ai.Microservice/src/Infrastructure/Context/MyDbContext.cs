@@ -21,6 +21,8 @@ public class MyDbContext : DbContext
 
     public virtual DbSet<AiSessionMessage> AiSessionMessages { get; set; } = null!;
 
+    public virtual DbSet<TextToSpeechLink> TextToSpeechLinks { get; set; } = null!;
+
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {
         if (!optionsBuilder.IsConfigured)
@@ -121,6 +123,32 @@ public class MyDbContext : DbContext
             entity.Property(e => e.LastActivityDate)
                 .HasColumnName("last_activity_date")
                 .HasColumnType("timestamp with time zone");
+        });
+
+        modelBuilder.Entity<TextToSpeechLink>(entity =>
+        {
+            entity.ToTable("text_to_speech_links");
+
+            entity.HasKey(e => e.Id);
+
+            entity.Property(e => e.Id)
+                .HasColumnName("id");
+
+            entity.Property(e => e.UserId)
+                .HasMaxLength(128)
+                .HasColumnName("user_id");
+
+            entity.Property(e => e.Link)
+                .HasMaxLength(2048)
+                .HasColumnName("link");
+
+            entity.Property(e => e.CreatedDate)
+                .HasColumnName("created_date")
+                .HasColumnType("timestamp with time zone")
+                .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+            entity.HasIndex(e => e.UserId)
+                .HasDatabaseName("idx_text_to_speech_links_user_id");
         });
 
     }
