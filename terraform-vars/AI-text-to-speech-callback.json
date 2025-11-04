@@ -1,0 +1,167 @@
+{
+  "name": "AI-text-to-speech-callback",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "text-to-speech-callback/:userid/:uniqueid",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "3b8f4d28-768c-4860-b2ca-3b6342da071a",
+      "name": "Webhook",
+      "webhookId": "0402bbb8-a391-4ef7-a9a0-dfbf036e4668"
+    },
+    {
+      "parameters": {
+        "respondWith": "allIncomingItems",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        512,
+        0
+      ],
+      "id": "6c06f823-3016-4354-9e16-f9c156e2ed05",
+      "name": "Respond to Webhook"
+    },
+    {
+      "parameters": {
+        "operation": "upsert",
+        "schema": {
+          "__rl": true,
+          "mode": "list",
+          "value": "public"
+        },
+        "table": {
+          "__rl": true,
+          "value": "text_to_speech_links",
+          "mode": "list",
+          "cachedResultName": "text_to_speech_links"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "unique_id": "={{ $json.params.uniqueid }}",
+            "user_id": "={{ $json.params.userid }}",
+            "link": "={{ $json.body.message }}",
+            "created_date": "={{ $now }}"
+          },
+          "matchingColumns": [
+            "unique_id"
+          ],
+          "schema": [
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": false,
+              "defaultMatch": true,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "user_id",
+              "displayName": "user_id",
+              "required": true,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "created_date",
+              "displayName": "created_date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "dateTime",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "unique_id",
+              "displayName": "unique_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "link",
+              "displayName": "link",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        208,
+        0
+      ],
+      "id": "2fb02a09-61e3-41bb-929c-956b879e7ac1",
+      "name": "Insert or update rows in a table",
+      "credentials": {
+        "postgres": {
+          "id": "mzCzIRPoNTc54ZoM",
+          "name": "Postgres account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Insert or update rows in a table",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Insert or update rows in a table": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "266965a2-d795-4769-840b-bc307ee1b9bd",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "f83e7fb18ba493e7d1930aa233c8f796a268414b4733948e376c4478d3b73a3a"
+  },
+  "id": "zzVWCROpp9irqFEK",
+  "tags": []
+}
