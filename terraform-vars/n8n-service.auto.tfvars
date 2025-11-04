@@ -59,11 +59,19 @@ services = {
       { name = "N8N_TEMPLATES_ENABLED", value = "false" },
       { name = "N8N_METRICS", value = "true" },
       { name = "QUEUE_HEALTH_CHECK_ACTIVE", value = "true" },
-      { name = "DB_SQLITE_POOL_SIZE", value = "5" },
       { name = "N8N_RUNNERS_ENABLED", value = "true" },
       { name = "N8N_BLOCK_ENV_ACCESS_IN_NODE", value = "false" },
       { name = "N8N_GIT_NODE_DISABLE_BARE_REPOS", value = "true" },
-      { name = "NODE_OPTIONS", value = "--max-old-space-size=352" }
+      { name = "NODE_OPTIONS", value = "--max-old-space-size=352" },
+      # PostgreSQL Database Configuration
+      { name = "DB_TYPE", value = "postgresdb" },
+      { name = "DB_POSTGRESDB_HOST", value = "pg-2-database25812.g.aivencloud.com" },
+      { name = "DB_POSTGRESDB_PORT", value = "19217" },
+      { name = "DB_POSTGRESDB_DATABASE", value = "aidb" },
+      { name = "DB_POSTGRESDB_USER", value = "avnadmin" },
+      { name = "DB_POSTGRESDB_PASSWORD", value = "AVNS_vsIotPLRrxJUhcJlM0m" },
+      { name = "DB_POSTGRESDB_SSL_ENABLED", value = "true" },
+      { name = "DB_POSTGRESDB_SSL_REJECT_UNAUTHORIZED", value = "false" }
     ]
 
     ecs_container_health_check = {
