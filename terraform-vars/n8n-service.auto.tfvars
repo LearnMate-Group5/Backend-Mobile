@@ -51,6 +51,8 @@ services = {
       { name = "N8N_PROTOCOL", value = "http" },
       { name = "N8N_SECURE_COOKIE", value = "false" },
       { name = "N8N_PATH", value = "/n8n/" },
+      { name = "N8N_PROXY_HOPS", value = "2" },
+      { name = "N8N_ENCRYPTION_KEY", value = "0Kg04Nn03!" },
       { name = "GENERIC_TIMEZONE", value = "Asia/Ho_Chi_Minh" },
       { name = "TZ", value = "Asia/Ho_Chi_Minh" },
       { name = "N8N_ENFORCE_SETTINGS_FILE_PERMISSIONS", value = "true" },
