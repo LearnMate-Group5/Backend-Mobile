@@ -1,0 +1,73 @@
+using System.Text.Json.Serialization;
+
+namespace Application.Payments.DTOs;
+
+/// <summary>
+/// MoMo IPN callback request from MoMo server
+/// Reference: https://developers.momo.vn/v3/docs/payment/api/result-handling/ipn
+/// </summary>
+public class MoMoCallbackRequest
+{
+    [JsonPropertyName("partnerCode")]
+    public string PartnerCode { get; set; } = string.Empty;
+
+    [JsonPropertyName("orderId")]
+    public string OrderId { get; set; } = string.Empty;
+
+    [JsonPropertyName("requestId")]
+    public string RequestId { get; set; } = string.Empty;
+
+    [JsonPropertyName("amount")]
+    public long Amount { get; set; }
+
+    [JsonPropertyName("orderInfo")]
+    public string OrderInfo { get; set; } = string.Empty;
+
+    [JsonPropertyName("orderType")]
+    public string OrderType { get; set; } = string.Empty;
+
+    [JsonPropertyName("transId")]
+    public long TransId { get; set; }
+
+    [JsonPropertyName("resultCode")]
+    public int ResultCode { get; set; }
+
+    [JsonPropertyName("message")]
+    public string Message { get; set; } = string.Empty;
+
+    [JsonPropertyName("payType")]
+    public string PayType { get; set; } = string.Empty;
+
+    [JsonPropertyName("responseTime")]
+    public long ResponseTime { get; set; }
+
+    [JsonPropertyName("extraData")]
+    public string ExtraData { get; set; } = string.Empty;
+
+    [JsonPropertyName("signature")]
+    public string Signature { get; set; } = string.Empty;
+}
+
+/// <summary>
+/// MoMo IPN callback response
+/// </summary>
+public class MoMoCallbackResponse
+{
+    [JsonPropertyName("partnerCode")]
+    public string PartnerCode { get; set; } = string.Empty;
+
+    [JsonPropertyName("requestId")]
+    public string RequestId { get; set; } = string.Empty;
+
+    [JsonPropertyName("orderId")]
+    public string OrderId { get; set; } = string.Empty;
+
+    [JsonPropertyName("resultCode")]
+    public int ResultCode { get; set; }
+
+    [JsonPropertyName("message")]
+    public string Message { get; set; } = string.Empty;
+
+    [JsonPropertyName("responseTime")]
+    public long ResponseTime { get; set; }
+}

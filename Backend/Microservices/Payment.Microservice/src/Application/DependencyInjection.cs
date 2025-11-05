@@ -1,0 +1,36 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
+using Application.Behaviors;
+using FluentValidation;
+using MediatR;
+using Microsoft.Extensions.DependencyInjection;
+using SharedLibrary.Authentication;
+
+namespace Application
+{
+    public static class DependencyInjection
+    {
+        public static IServiceCollection AddApplication(this IServiceCollection services)
+        {
+            var assembly = typeof(DependencyInjection).Assembly;
+            var sharedLibraryAssembly = typeof(SharedLibrary.Common.Commands.SaveChangesCommand).Assembly;
+
+            services.AddMediatR(configuration => 
+            {
+                configuration.RegisterServicesFromAssembly(assembly);
+                configuration.RegisterServicesFromAssembly(sharedLibraryAssembly);
+            });
+            services.AddValidatorsFromAssembly(assembly);
+            services.AddAutoMapper(assembly);
+            services.AddScoped(typeof(IPipelineBehavior<,>), typeof(ValidationPipelineBehavior<,>));
+            services.AddValidatorsFromAssembly(assembly, includeInternalTypes: true);
+            
+            // Authentication services
+            services.AddScoped<IJwtTokenService, JwtTokenService>();
+            return services;
+
+        }
+    }
+}

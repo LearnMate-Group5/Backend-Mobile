@@ -47,6 +47,8 @@ services = {
       { name = "BOOK_MICROSERVICE_PORT", value = "5004" },
       { name = "SUBSCRIPTION_MICROSERVICE_HOST", value = "subscription-service" },
       { name = "SUBSCRIPTION_MICROSERVICE_PORT", value = "5005" },
+      { name = "PAYMENT_MICROSERVICE_HOST", value = "payment-service" },
+      { name = "PAYMENT_MICROSERVICE_PORT", value = "5006" },
       { name = "Jwt__SecretKey", value = "YourSuperSecretKeyThatIsAtLeast32CharactersLong!@#$%^&*()" },
       { name = "Jwt__Issuer", value = "UserMicroservice" },
       { name = "Jwt__Audience", value = "MicroservicesApp" },

@@ -546,6 +546,17 @@ module "ecs_server2" {
         ]
       },
       {
+        # Publish payment microservice to namespace
+        port_name      = var.services["payment"].ecs_service_connect_port_name
+        discovery_name = var.services["payment"].ecs_service_connect_discovery_name
+        client_aliases = [
+          {
+            dns_name = var.services["payment"].ecs_service_connect_dns_name
+            port     = var.services["payment"].ecs_container_port_mappings[0].container_port
+          }
+        ]
+      },
+      {
         # Publish AI microservice to namespace
         port_name      = var.services["ai"].ecs_service_connect_port_name
         discovery_name = var.services["ai"].ecs_service_connect_discovery_name
@@ -573,8 +584,8 @@ module "ecs_server2" {
 
   service_definitions = {
     server-2 = {
-      task_cpu            = var.services["apigateway"].ecs_container_cpu + var.services["user"].ecs_container_cpu + var.services["ai"].ecs_container_cpu + var.services["book"].ecs_container_cpu + var.services["subscription"].ecs_container_cpu + 64
-      task_memory         = var.services["apigateway"].ecs_container_memory + var.services["user"].ecs_container_memory + var.services["ai"].ecs_container_memory + var.services["book"].ecs_container_memory + var.services["subscription"].ecs_container_memory + 64
+      task_cpu            = var.services["apigateway"].ecs_container_cpu + var.services["user"].ecs_container_cpu + var.services["ai"].ecs_container_cpu + var.services["book"].ecs_container_cpu + var.services["subscription"].ecs_container_cpu + var.services["payment"].ecs_container_cpu + 64
+      task_memory         = var.services["apigateway"].ecs_container_memory + var.services["user"].ecs_container_memory + var.services["ai"].ecs_container_memory + var.services["book"].ecs_container_memory + var.services["subscription"].ecs_container_memory + var.services["payment"].ecs_container_memory + 64
       desired_count       = 1
       assign_public_ip    = false
       enable_auto_scaling = false
@@ -655,6 +666,41 @@ module "ecs_server2" {
           depends_on = []
         },
         {
+          # Payment microservice - consumes RabbitMQ/Redis from server-1
+          name                 = "payment-microservice"
+          image_repository_url = var.services["payment"].ecs_container_image_repository_url
+          image_tag            = var.services["payment"].ecs_container_image_tag
+          cpu                  = var.services["payment"].ecs_container_cpu
+          memory               = var.services["payment"].ecs_container_memory
+          essential            = var.services["payment"].ecs_container_essential
+          port_mappings        = var.services["payment"].ecs_container_port_mappings
+          environment_variables = concat(
+            [
+              for env_var in var.services["payment"].ecs_environment_variables :
+              env_var
+              if env_var.name != "ZaloPay__CallbackUrl" && env_var.name != "MoMo__IpnUrl"
+            ],
+            [
+              {
+                name  = "ZaloPay__CallbackUrl"
+                value = "http://${module.alb.alb_dns_name}/api/payment/zalopay/ipn"
+              },
+              {
+                name  = "MoMo__IpnUrl"
+                value = "http://${module.alb.alb_dns_name}/api/payment/momo/ipn"
+              }
+            ]
+          )
+          health_check = {
+            command     = var.services["payment"].ecs_container_health_check.command
+            interval    = var.services["payment"].ecs_container_health_check.interval
+            timeout     = var.services["payment"].ecs_container_health_check.timeout
+            retries     = var.services["payment"].ecs_container_health_check.retries
+            startPeriod = var.services["payment"].ecs_container_health_check.startPeriod
+          }
+          depends_on = []
+        },
+        {
           # AI microservice - relies on n8n service running on server-1
           name                 = "ai-microservice"
           image_repository_url = var.services["ai"].ecs_container_image_repository_url
@@ -705,7 +751,7 @@ module "ecs_server2" {
             retries     = var.services["apigateway"].ecs_container_health_check.retries
             startPeriod = var.services["apigateway"].ecs_container_health_check.startPeriod
           }
-          depends_on = ["user-microservice", "ai-microservice", "book-microservice", "subscription-microservice"]
+          depends_on = ["user-microservice", "ai-microservice", "book-microservice", "subscription-microservice", "payment-microservice"]
         }
       ]
 

@@ -1,7 +1,9 @@
 using System;
 using Application.Common.Interfaces;
+using Infrastructure.Consumers;
 using Infrastructure.Context;
 using Infrastructure.Repositories;
+using MassTransit;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
@@ -31,6 +33,29 @@ public static class DependencyInjection
 
         services.AddScoped<ISubscriptionRepository, SubscriptionRepository>();
         services.AddScoped<IUserSubscriptionRepository, UserSubscriptionRepository>();
+
+        // Configure MassTransit with RabbitMQ
+        services.AddMassTransit(x =>
+        {
+            x.AddConsumer<PaymentSuccessConsumer>();
+            x.AddConsumer<GetSubscriptionPriceConsumer>();
+
+            x.UsingRabbitMq((context, cfg) =>
+            {
+                var rabbitMqHost = Environment.GetEnvironmentVariable("RABBITMQ_HOST") ?? "localhost";
+                var rabbitMqPort = int.Parse(Environment.GetEnvironmentVariable("RABBITMQ_PORT") ?? "5672");
+                var rabbitMqUser = Environment.GetEnvironmentVariable("RABBITMQ_USERNAME") ?? "guest";
+                var rabbitMqPassword = Environment.GetEnvironmentVariable("RABBITMQ_PASSWORD") ?? "guest";
+
+                cfg.Host(rabbitMqHost, (ushort)rabbitMqPort, "/", h =>
+                {
+                    h.Username(rabbitMqUser);
+                    h.Password(rabbitMqPassword);
+                });
+
+                cfg.ConfigureEndpoints(context);
+            });
+        });
 
         return services;
     }

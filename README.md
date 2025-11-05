@@ -8,10 +8,18 @@ $env:ASPNETCORE_ENVIRONMENT="Development"; dotnet ef migrations add Initial -p B
 $env:ASPNETCORE_ENVIRONMENT="Development"; dotnet ef migrations add Initial -p Backend/Microservices/Book.Microservice/src/Infrastructure/Infrastructure.csproj -s Backend/Microservices/Book.Microservice/src/Infrastructure/Infrastructure.csproj -c MyDbContext --msbuildprojectextensionspath Backend/Microservices/Book.Microservice/src/Infrastructure/Build/obj -- --connection-string="Host=pg-1-database25811.g.aivencloud.com;Port=16026;Database=bookdb;Username=avnadmin;Password=AVNS_iGi4kJJObNRnGdM6BTb;SslMode=Require"
 ```
 
+```
+$env:ASPNETCORE_ENVIRONMENT="Development"; dotnet ef migrations add Initial -p Backend/Microservices/Payment.Microservice/src/Infrastructure/Infrastructure.csproj -s Backend/Microservices/Payment.Microservice/src/Infrastructure/Infrastructure.csproj -c MyDbContext --msbuildprojectextensionspath Backend/Microservices/Payment.Microservice/src/Infrastructure/Build/obj -- --connection-string="Host=pg-2-database25812.g.aivencloud.com;Port=19217;Database=paymentdb;Username=avnadmin;Password=AVNS_vsIotPLRrxJUhcJlM0m;SslMode=Require"
+```
+
 Apply Migration
 
 ```
 $env:ASPNETCORE_ENVIRONMENT="Development"; dotnet ef database update -p Backend/Microservices/User.Microservice/src/Infrastructure/Infrastructure.csproj -s Backend/Microservices/User.Microservice/src/Infrastructure/Infrastructure.csproj -c MyDbContext --msbuildprojectextensionspath Backend/Microservices/User.Microservice/src/Infrastructure/Build/obj -- --connection-string="Host=pg-2-database25812.g.aivencloud.com;Port=19217;Database=defaultdb;Username=avnadmin;Password=AVNS_vsIotPLRrxJUhcJlM0m;SslMode=Require"
+```
+
+```
+$env:ASPNETCORE_ENVIRONMENT="Development"; dotnet ef database update -p Backend/Microservices/Payment.Microservice/src/Infrastructure/Infrastructure.csproj -s Backend/Microservices/Payment.Microservice/src/Infrastructure/Infrastructure.csproj -c MyDbContext --msbuildprojectextensionspath Backend/Microservices/Payment.Microservice/src/Infrastructure/Build/obj -- --connection-string="Host=pg-2-database25812.g.aivencloud.com;Port=19217;Database=paymentdb;Username=avnadmin;Password=AVNS_vsIotPLRrxJUhcJlM0m;SslMode=Require"
 ```
 
 Nuke All Tables

@@ -47,6 +47,7 @@ services = {
       { name = "DATABASE_NAME", value = "userdb" },
       { name = "DATABASE_USERNAME", value = "avnadmin" },
       { name = "DATABASE_PASSWORD", value = "AVNS_vsIotPLRrxJUhcJlM0m" },
+      { name = "DATABASE_SSLMODE", value = "Require" },
       { name = "ASPNETCORE_URLS", value = "http://+:5002" },
       { name = "RABBITMQ_HOST", value = "rabbitmq" },
       { name = "RABBITMQ_PORT", value = "5672" },

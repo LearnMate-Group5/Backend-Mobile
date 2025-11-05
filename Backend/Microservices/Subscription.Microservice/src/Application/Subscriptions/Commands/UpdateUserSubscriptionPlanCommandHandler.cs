@@ -61,11 +61,6 @@ public sealed class UpdateUserSubscriptionPlanCommandHandler
             return Result.Failure<UserSubscriptionDto>(SubscriptionErrors.UpgradeRequiresHigherPrice(request.SubscriptionId));
         }
 
-        // Deactivate all existing active subscriptions
-        await _userSubscriptionRepository.DeactivateUserSubscriptionsAsync(
-            request.UserId,
-            cancellationToken);
-
         // Determine expiration date based on subscription name
         int daysToAdd = 30; // Default: monthly subscription
         var subscriptionName = newPlan.Name.ToLower();
@@ -79,13 +74,13 @@ public sealed class UpdateUserSubscriptionPlanCommandHandler
             daysToAdd = 30;
         }
 
-        // Create new user subscription with Current status
+        // Create new user subscription with PendingUpgrade status (DO NOT deactivate current subscription yet)
         var newUserSubscription = new Domain.Entities.UserSubscription
         {
             UserSubscriptionId = Guid.NewGuid(),
             SubscriptionId = request.SubscriptionId,
             UserId = request.UserId,
-            Status = "Current",
+            Status = "PendingUpgrade",
             SubscribedAt = DateTime.UtcNow,
             ExpiredAt = DateTime.UtcNow.AddDays(daysToAdd),
             Subscription = newPlan

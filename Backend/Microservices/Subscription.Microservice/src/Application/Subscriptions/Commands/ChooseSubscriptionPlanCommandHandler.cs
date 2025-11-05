@@ -62,13 +62,13 @@ public sealed class ChooseSubscriptionPlanCommandHandler
             daysToAdd = 30;
         }
 
-        // Create new user subscription with Current status
+        // Create new user subscription with Pending status
         var userSubscription = new UserSubscription
         {
             UserSubscriptionId = Guid.NewGuid(),
             SubscriptionId = request.SubscriptionId,
             UserId = request.UserId,
-            Status = "Current",
+            Status = "Pending",
             SubscribedAt = DateTime.UtcNow,
             ExpiredAt = DateTime.UtcNow.AddDays(daysToAdd),
             Subscription = subscription
