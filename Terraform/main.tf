@@ -107,6 +107,12 @@ module "ec2" {
       user_data_extra     = <<-EOF
       EOF
     }
+    server-3 = {
+      instance_attributes = { service_group = "server-3" }
+      tags                = { ServiceGroup = "server-3" }
+      user_data_extra     = <<-EOF
+      EOF
+    }
   }
 
   depends_on = [module.alb]
@@ -221,7 +227,9 @@ resource "aws_service_discovery_private_dns_namespace" "ecs_namespace" {
   tags        = { Name = "${var.project_name}-dns-namespace" }
 }
 
-# ECS Module - Server-1 (RabbitMQ + Redis + n8n)
+# ECS Module - Server-1 (RabbitMQ + Redis only)
+# Starts in parallel with server-3 immediately after EC2 instances are ready
+# wait_for_steady_state=true ensures service reaches stable state before server-2 starts
 module "ecs_server1" {
   source = "./modules/ecs"
 
@@ -270,25 +278,15 @@ module "ecs_server1" {
             port     = var.services["redis"].ecs_container_port_mappings[0].container_port
           }
         ]
-      },
-      {
-        port_name      = var.services["n8n"].ecs_service_connect_port_name
-        discovery_name = var.services["n8n"].ecs_service_connect_discovery_name
-        client_aliases = [
-          {
-            dns_name = var.services["n8n"].ecs_service_connect_dns_name
-            port     = var.services["n8n"].ecs_container_port_mappings[0].container_port
-          }
-        ]
       }
-      # Note: API Gateway, User, and AI services auto-discovered via Service Connect namespace
+      # Note: API Gateway, User, AI, n8n services auto-discovered via Service Connect namespace
     ]
   }
 
   service_definitions = {
     server-1 = {
-      task_cpu         = lookup(var.services["n8n"], "ecs_task_cpu", var.services["rabbitmq"].ecs_container_cpu + var.services["redis"].ecs_container_cpu + var.services["n8n"].ecs_container_cpu + 64)
-      task_memory      = lookup(var.services["n8n"], "ecs_task_memory", var.services["rabbitmq"].ecs_container_memory + var.services["redis"].ecs_container_memory + var.services["n8n"].ecs_container_memory + 64)
+      task_cpu         = var.services["rabbitmq"].ecs_container_cpu + var.services["redis"].ecs_container_cpu + 64
+      task_memory      = var.services["rabbitmq"].ecs_container_memory + var.services["redis"].ecs_container_memory + 64
       desired_count    = 1
       assign_public_ip = false
       placement_constraints = [
@@ -360,7 +358,79 @@ module "ecs_server1" {
             }
           ]
           depends_on = []
-        },
+        }
+      ]
+
+      target_groups = []
+    }
+  }
+
+  depends_on = [module.ec2]
+}
+
+# ECS Module - Server-3 (n8n only)
+# Starts in parallel with server-1 immediately after EC2 instances are ready
+# Dedicated server for n8n with maximized resource allocation (~80% of t3.micro)
+# wait_for_steady_state=true ensures service reaches stable state before server-2 starts
+module "ecs_server3" {
+  source = "./modules/ecs"
+
+  project_name             = var.project_name
+  aws_region               = var.aws_region
+  vpc_id                   = module.vpc.vpc_id
+  vpc_cidr                 = var.vpc_cidr
+  task_subnet_ids          = [module.vpc.private_subnet_id]
+  ecs_cluster_id           = module.ec2.ecs_cluster_arn
+  ecs_cluster_name         = module.ec2.ecs_cluster_name
+  alb_security_group_id    = module.alb.alb_sg_id
+  assign_public_ip         = false
+  desired_count            = 1
+  service_names            = ["server-3"]
+  service_discovery_domain = "${var.project_name}.${var.service_discovery_domain_suffix}"
+  service_dependencies     = {}
+  enable_auto_scaling      = var.enable_auto_scaling
+  enable_service_connect   = var.enable_service_connect
+  wait_for_steady_state    = true 
+
+  # Pass shared resources
+  shared_log_group_name     = aws_cloudwatch_log_group.ecs_logs.name
+  shared_task_role_arn      = aws_iam_role.ecs_task_role.arn
+  shared_execution_role_arn = aws_iam_role.ecs_execution_role.arn
+  shared_task_sg_id         = aws_security_group.ecs_task_sg.id
+  service_connect_namespace = var.enable_service_connect ? aws_service_discovery_private_dns_namespace.ecs_namespace[0].arn : null
+
+  service_connect_services = {
+    server-3 = [
+      {
+        port_name      = var.services["n8n"].ecs_service_connect_port_name
+        discovery_name = var.services["n8n"].ecs_service_connect_discovery_name
+        client_aliases = [
+          {
+            dns_name = var.services["n8n"].ecs_service_connect_dns_name
+            port     = var.services["n8n"].ecs_container_port_mappings[0].container_port
+          }
+        ]
+      }
+      # Note: All other services auto-discovered via Service Connect namespace
+    ]
+  }
+
+  service_definitions = {
+    server-3 = {
+      task_cpu         = lookup(var.services["n8n"], "ecs_task_cpu", var.services["n8n"].ecs_container_cpu + 128)
+      task_memory      = lookup(var.services["n8n"], "ecs_task_memory", var.services["n8n"].ecs_container_memory + 100)
+      desired_count    = 1
+      assign_public_ip = false
+      placement_constraints = [
+        {
+          type       = "memberOf"
+          expression = "attribute:service_group == server-3"
+        }
+      ]
+
+      volumes = []
+
+      containers = [
         {
           # n8n automation - provides webhooks for AI service
           name                 = "n8n"
@@ -463,7 +533,6 @@ EOT
           ]
           depends_on = ["n8n"]
         }
-
       ]
 
       target_groups = [
@@ -481,7 +550,8 @@ EOT
 }
 
 # ECS Module - Server-2 (User + AI + API Gateway)
-# Deploys after server-1 to ensure service discovery endpoints are available
+# Deploys AFTER server-1 (RabbitMQ/Redis) and server-3 (n8n) reach steady state
+# This ensures all required dependencies are available before microservices start
 module "ecs_server2" {
   source = "./modules/ecs"
 
@@ -766,7 +836,11 @@ module "ecs_server2" {
     }
   }
 
-  depends_on = [module.ecs_server1]
+  # Wait for both server-1 and server-3 to reach steady state before starting server-2
+  # server-1 provides RabbitMQ/Redis dependencies
+  # server-3 provides n8n webhooks for AI service
+  # wait_for_steady_state=true ensures each module waits for ECS service to stabilize
+  depends_on = [module.ecs_server1, module.ecs_server3]
 }
 
 ## CloudFront and Lambda@Edge modules removed
