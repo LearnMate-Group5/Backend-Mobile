@@ -32,9 +32,9 @@ services = {
     ecs_container_name_suffix          = "n8n"
     ecs_container_image_repository_url = "docker.n8n.io/n8nio/n8n"
     ecs_container_image_tag            = "latest"
-    ecs_container_cpu                  = 256
-    ecs_container_memory               = 400
-    ecs_task_memory                    = 800
+    ecs_container_cpu                  = 768
+    ecs_container_memory               = 800
+    ecs_task_memory                    = 900
     ecs_container_essential            = true
     ecs_container_port_mappings = [
       {
@@ -62,9 +62,9 @@ services = {
       { name = "N8N_METRICS", value = "true" },
       { name = "QUEUE_HEALTH_CHECK_ACTIVE", value = "true" },
       { name = "N8N_RUNNERS_ENABLED", value = "true" },
-      { name = "N8N_BLOCK_ENV_ACCESS_IN_NODE", value = "false" },
+      { name = "N8N_BLOCK_ENV_ACCESS_IN_NODE", value = "true" },
       { name = "N8N_GIT_NODE_DISABLE_BARE_REPOS", value = "true" },
-      { name = "NODE_OPTIONS", value = "--max-old-space-size=352" },
+      { name = "NODE_OPTIONS", value = "--max-old-space-size=700" },
       # PostgreSQL Database Configuration
       { name = "DB_TYPE", value = "postgresdb" },
       { name = "DB_POSTGRESDB_HOST", value = "pg-2-database25812.g.aivencloud.com" },
