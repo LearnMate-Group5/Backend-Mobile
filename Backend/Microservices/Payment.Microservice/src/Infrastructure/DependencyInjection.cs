@@ -1,5 +1,9 @@
 using System;
 using System.IO;
+using System.Net;
+using System.Net.Http;
+using System.Net.Security;
+using System.Security.Authentication;
 using SharedLibrary.Utils;
 using SharedLibrary.Configs;
 using Microsoft.Extensions.DependencyInjection;
@@ -26,14 +30,28 @@ namespace Infrastructure
             services.AddScoped<ISaveChangesUnitOfWork, SaveChangesUnitOfWorkAdapter>();
             services.AddScoped(typeof(IRepository<>), typeof(Repository<>));
 
-            // Register ZaloPay service
-            services.AddHttpClient<IZaloPayService, ZaloPayService>();
+            // Register ZaloPay service with configured HttpClient
+            services.AddHttpClient<IZaloPayService, ZaloPayService>()
+                .ConfigurePrimaryHttpMessageHandler(() => CreateHttpClientHandler())
+                .ConfigureHttpClient(client =>
+                {
+                    // Set timeout for cross-region calls (AWS US -> Vietnam)
+                    client.Timeout = TimeSpan.FromSeconds(120);
+                })
+                .SetHandlerLifetime(TimeSpan.FromMinutes(5));
 
             // Register ZaloPay IPN service
             services.AddScoped<IZaloPayIpnService, ZaloPayIpnService>();
 
-            // Register MoMo service
-            services.AddHttpClient<IMoMoService, MoMoService>();
+            // Register MoMo service with configured HttpClient
+            services.AddHttpClient<IMoMoService, MoMoService>()
+                .ConfigurePrimaryHttpMessageHandler(() => CreateHttpClientHandler())
+                .ConfigureHttpClient(client =>
+                {
+                    // Set timeout for cross-region calls (AWS US -> Vietnam)
+                    client.Timeout = TimeSpan.FromSeconds(120);
+                })
+                .SetHandlerLifetime(TimeSpan.FromMinutes(5));
 
             // Register MoMo IPN service
             services.AddScoped<IMoMoIpnService, MoMoIpnService>();
@@ -101,6 +119,46 @@ namespace Infrastructure
             });
 
             return services;
+        }
+
+        /// <summary>
+        /// Creates a configured HttpClientHandler for payment gateway communication
+        /// Fixes SSL/TLS issues when running on AWS ECS
+        /// </summary>
+        private static HttpClientHandler CreateHttpClientHandler()
+        {
+            var handler = new HttpClientHandler
+            {
+                // Enable TLS 1.2 and 1.3 (required by MoMo/ZaloPay)
+                SslProtocols = SslProtocols.Tls12 | SslProtocols.Tls13,
+                
+                // Increase timeout for cross-region calls (AWS US -> Vietnam)
+                ServerCertificateCustomValidationCallback = (message, cert, chain, sslPolicyErrors) =>
+                {
+                    // In production, validate certificates properly
+                    // For now, accept valid certificates with proper chain validation
+                    if (sslPolicyErrors == SslPolicyErrors.None)
+                        return true;
+
+                    // Log any SSL errors for debugging
+                    Console.WriteLine($"SSL Policy Error: {sslPolicyErrors}");
+                    return false;
+                },
+                
+                // Connection pooling settings
+                MaxConnectionsPerServer = 10,
+                
+                // Enable automatic decompression
+                AutomaticDecompression = DecompressionMethods.GZip | DecompressionMethods.Deflate,
+                
+                // Use default credentials
+                UseDefaultCredentials = false,
+                
+                // Connection keep-alive
+                UseCookies = false
+            };
+
+            return handler;
         }
     }
 }
