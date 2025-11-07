@@ -6,6 +6,7 @@ using SharedLibrary.Authentication;
 using SharedLibrary.Common.ResponseModel;
 using SharedLibrary.Abstractions.UnitOfWork;
 using SharedLibrary.Extensions;
+using Domain.Constants;
 
 namespace Application.Users.Commands;
 
@@ -38,6 +39,11 @@ public class RefreshTokenCommandHandler : IRequestHandler<RefreshTokenCommand, R
             return Result.Failure<LoginResponse>(new Error("Auth.InvalidRefreshToken", "Invalid or expired refresh token"));
         }
 
+        if (!user.IsActive)
+        {
+            return Result.Failure<LoginResponse>(new Error("Auth.UserInactive", "Account has been disabled."));
+        }
+
         // Get user roles
         var roles = user.UserRoles.Select(ur => ur.Role.RoleName).ToList();
 
@@ -48,14 +54,16 @@ public class RefreshTokenCommandHandler : IRequestHandler<RefreshTokenCommand, R
         // Update user with new refresh token
         user.RefreshToken = newRefreshToken;
         user.RefreshTokenExpiry = DateTimeExtensions.PostgreSqlUtcNow.AddDays(7);
+        user.IsActive = true;
+        user.UpdatedAt = DateTimeExtensions.PostgreSqlUtcNow;
 
         _userRepository.Update(user);
 
         var response = new LoginResponse(
             AccessToken: accessToken,
             RefreshToken: newRefreshToken,
-            ExpiresAt: DateTime.Now.AddMinutes(60),
-            User: new UserInfo(user.UserId, user.Name, user.Email, roles)
+            ExpiresAt: DateTimeExtensions.PostgreSqlUtcNow.AddMinutes(60),
+            User: new UserInfo(user.UserId, user.Name, user.Email, roles, UserStatus.FromBool(user.IsActive))
         );
 
         return Result.Success(response);

@@ -21,6 +21,8 @@ public partial class User
 
     public DateTime? UpdatedAt { get; set; }
 
+    public DateTime? DateOfBirth { get; set; }
+
     public bool IsVerified { get; set; }
 
     public bool IsActive { get; set; } = true;
@@ -29,9 +31,15 @@ public partial class User
 
     public bool? IsPremium { get; set; }
 
+    public string? Gender { get; set; }
+
+    public string? PhoneNumber { get; set; }
+
     public string? ProviderName { get; set; }
 
     public string? ProviderUserId { get; set; }
 
     public virtual ICollection<UserRole> UserRoles { get; set; } = new List<UserRole>();
+
+    public virtual ICollection<PasswordResetRequest> PasswordResetRequests { get; set; } = new List<PasswordResetRequest>();
 }

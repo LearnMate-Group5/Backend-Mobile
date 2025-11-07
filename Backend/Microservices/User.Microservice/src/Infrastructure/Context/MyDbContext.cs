@@ -24,6 +24,8 @@ public partial class MyDbContext : DbContext
 
     public virtual DbSet<UserRole> UserRoles { get; set; }
 
+    public virtual DbSet<PasswordResetRequest> PasswordResetRequests { get; set; }
+
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {
         if (!optionsBuilder.IsConfigured)
@@ -90,6 +92,9 @@ public partial class MyDbContext : DbContext
             entity.Property(e => e.UpdatedAt)
                 .HasColumnType("timestamp with time zone")
                 .HasColumnName("updated_at");
+            entity.Property(e => e.DateOfBirth)
+                .HasColumnType("date")
+                .HasColumnName("date_of_birth");
             entity.Property(e => e.Email)
                 .HasMaxLength(100)
                 .HasColumnName("email");
@@ -100,16 +105,22 @@ public partial class MyDbContext : DbContext
                 .HasMaxLength(255)
                 .HasColumnName("password_hash");
             entity.Property(e => e.AvatarUrl)
-                .HasMaxLength(255)
+                .HasColumnType("text")
                 .HasColumnName("avatar_url");
             entity.Property(e => e.IsPremium)
                 .HasColumnName("is_premium");
+            entity.Property(e => e.Gender)
+                .HasMaxLength(20)
+                .HasColumnName("gender");
             entity.Property(e => e.ProviderName)
                 .HasMaxLength(100)
                 .HasColumnName("provider_name");
             entity.Property(e => e.ProviderUserId)
                 .HasMaxLength(100)
                 .HasColumnName("provider_user_id");
+            entity.Property(e => e.PhoneNumber)
+                .HasMaxLength(20)
+                .HasColumnName("phone_number");
             entity.Property(e => e.RefreshToken)
                 .HasMaxLength(255)
                 .HasColumnName("refresh_token");
@@ -144,6 +155,47 @@ public partial class MyDbContext : DbContext
             entity.HasOne(d => d.User).WithMany(p => p.UserRoles)
                 .HasForeignKey(d => d.UserId)
                 .HasConstraintName("user_roles_user_id_fkey");
+        });
+
+        modelBuilder.Entity<PasswordResetRequest>(entity =>
+        {
+            entity.HasKey(e => e.PasswordResetRequestId).HasName("password_reset_requests_pkey");
+
+            entity.ToTable("password_reset_requests");
+
+            entity.HasIndex(e => e.Token, "password_reset_requests_token_key").IsUnique();
+
+            entity.Property(e => e.PasswordResetRequestId)
+                .HasDefaultValueSql("gen_random_uuid()")
+                .HasColumnName("password_reset_request_id");
+
+            entity.Property(e => e.UserId)
+                .HasColumnName("user_id");
+
+            entity.Property(e => e.Token)
+                .HasMaxLength(200)
+                .HasColumnName("token");
+
+            entity.Property(e => e.OtpHash)
+                .HasMaxLength(255)
+                .HasColumnName("otp_hash");
+
+            entity.Property(e => e.CreatedAt)
+                .HasDefaultValueSql("CURRENT_TIMESTAMP")
+                .HasColumnType("timestamp with time zone")
+                .HasColumnName("created_at");
+
+            entity.Property(e => e.ExpiresAt)
+                .HasColumnType("timestamp with time zone")
+                .HasColumnName("expires_at");
+
+            entity.Property(e => e.Used)
+                .HasColumnName("used");
+
+            entity.HasOne(d => d.User)
+                .WithMany(p => p.PasswordResetRequests)
+                .HasForeignKey(d => d.UserId)
+                .HasConstraintName("password_reset_requests_user_id_fkey");
         });
 
         OnModelCreatingPartial(modelBuilder);

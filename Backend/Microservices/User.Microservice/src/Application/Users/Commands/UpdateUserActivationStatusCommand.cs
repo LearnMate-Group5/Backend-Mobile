@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Domain.Repositories;
 using SharedLibrary.Abstractions.Messaging;
 using SharedLibrary.Common.ResponseModel;
+using SharedLibrary.Extensions;
 
 namespace Application.Users.Commands
 {
@@ -31,6 +32,14 @@ namespace Application.Users.Commands
                 }
 
                 user.IsActive = command.IsActive;
+                user.UpdatedAt = DateTimeExtensions.PostgreSqlUtcNow;
+
+                if (!command.IsActive)
+                {
+                    user.RefreshToken = null;
+                    user.RefreshTokenExpiry = null;
+                }
+
                 _userRepository.Update(user);
             }
             catch (KeyNotFoundException)

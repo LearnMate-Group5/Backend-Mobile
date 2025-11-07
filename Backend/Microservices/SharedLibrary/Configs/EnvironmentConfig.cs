@@ -29,5 +29,50 @@ namespace SharedLibrary.Configs
         public string RedisHost => Environment.GetEnvironmentVariable("REDIS_HOST") ?? "redis";
         public string RedisPassword => Environment.GetEnvironmentVariable("REDIS_PASSWORD") ?? "default";
         public int RedisPort => int.TryParse(Environment.GetEnvironmentVariable("REDIS_PORT"), out var port) ? port : 6379;
+
+        // SMTP / Email configuration
+        public string? SmtpHost => Environment.GetEnvironmentVariable("SMTP_HOST");
+        public int SmtpPort => int.TryParse(Environment.GetEnvironmentVariable("SMTP_PORT"), out var port) ? port : 587;
+        public string? SmtpUsername =>
+            Environment.GetEnvironmentVariable("SMTP_USERNAME") ??
+            Environment.GetEnvironmentVariable("SMTP_USER");
+        public string? SmtpPassword =>
+            Environment.GetEnvironmentVariable("SMTP_PASSWORD") ??
+            Environment.GetEnvironmentVariable("SMTP_PASS");
+        public bool SmtpEnableSsl
+        {
+            get
+            {
+                var raw = Environment.GetEnvironmentVariable("SMTP_ENABLE_SSL") ??
+                          Environment.GetEnvironmentVariable("SMTP_SECURE");
+                return ParseBool(raw, defaultValue: true);
+            }
+        }
+        public string SmtpFromAddress =>
+            Environment.GetEnvironmentVariable("SMTP_FROM_ADDRESS") ??
+            Environment.GetEnvironmentVariable("SMTP_FROM_EMAIL") ??
+            "no-reply@example.com";
+        public string SmtpFromName =>
+            Environment.GetEnvironmentVariable("SMTP_FROM_NAME") ??
+            Environment.GetEnvironmentVariable("SMTP_FROM_EMAIL") ??
+            "LearnMate Support";
+
+        // Password reset configuration
+        public string PasswordResetLinkTemplate => Environment.GetEnvironmentVariable("PASSWORD_RESET_LINK_TEMPLATE") ?? "https://frontend.example/reset-password?token={token}&email={email}";
+        public int PasswordResetTokenExpiryMinutes => int.TryParse(Environment.GetEnvironmentVariable("PASSWORD_RESET_TOKEN_EXPIRY_MINUTES"), out var minutes) ? minutes : 15;
+        public int PasswordResetOtpLength => int.TryParse(Environment.GetEnvironmentVariable("PASSWORD_RESET_OTP_LENGTH"), out var length) ? length : 6;
+        public string PasswordResetEmailSubject => Environment.GetEnvironmentVariable("PASSWORD_RESET_EMAIL_SUBJECT") ?? "Reset your password";
+
+        private static bool ParseBool(string? value, bool defaultValue = true)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                return defaultValue;
+            }
+
+            return value.Equals("true", StringComparison.OrdinalIgnoreCase) ||
+                   value.Equals("1", StringComparison.OrdinalIgnoreCase) ||
+                   value.Equals("yes", StringComparison.OrdinalIgnoreCase);
+        }
     }
 } 

@@ -9,6 +9,7 @@ namespace Domain.Repositories
 {
     public interface IUserRepository : IRepository<User>
     {
-        
+        Task EnsureAvatarColumnSupportsLargeContentAsync(CancellationToken cancellationToken = default);
+        Task<User?> GetByEmailAsync(string email, CancellationToken cancellationToken = default);
     }
 }

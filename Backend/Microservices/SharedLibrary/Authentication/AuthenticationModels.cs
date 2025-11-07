@@ -14,7 +14,8 @@ public record UserInfo(
     Guid UserId, 
     string Name, 
     string Email, 
-    IEnumerable<string> Roles
+    IEnumerable<string> Roles,
+    string? Status = null
 );
 
 // Deprecated: use Application.Users.Commands.RefreshTokenCommand directly

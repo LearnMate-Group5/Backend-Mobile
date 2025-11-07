@@ -15,6 +15,8 @@ using Application.Sagas;
 using Infrastructure.Context;
 using SharedLibrary.Adapters;
 using SharedLibrary.Authentication;
+using Application.Common.Interfaces;
+using Infrastructure.Email;
 
 namespace Infrastructure
 {
@@ -27,10 +29,12 @@ namespace Infrastructure
             services.AddScoped<IUserRepository, UserRepository>();
             services.AddScoped<IRoleRepository, RoleRepository>();
             services.AddScoped<IUserRoleRepository, UserRoleRepository>();
+            services.AddScoped<IPasswordResetRequestRepository, PasswordResetRequestRepository>();
             services.AddScoped<IUnitOfWork, UnitOfWork>();
             services.AddScoped<ISaveChangesUnitOfWork, SaveChangesUnitOfWorkAdapter>();
             services.AddScoped(typeof(IRepository<>), typeof(Repository<>));
             services.AddSingleton<IFirebaseTokenVerifier, FirebaseTokenVerifier>();
+            services.AddScoped<IEmailSender, SmtpEmailSender>();
             services.AddSingleton<EnvironmentConfig>();
             var environment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT");
             using var serviceProvider = services.BuildServiceProvider();

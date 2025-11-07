@@ -3,6 +3,7 @@ using System;
 using Infrastructure.Context;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Infrastructure.Migrations
 {
     [DbContext(typeof(MyDbContext))]
-    partial class MyDbContextModelSnapshot : ModelSnapshot
+    [Migration("20251106074510_Initial")]
+    partial class Initial
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -32,55 +35,6 @@ namespace Infrastructure.Migrations
                         .HasName("Job_pkey");
 
                     b.ToTable("Job", (string)null);
-                });
-
-            modelBuilder.Entity("Domain.Entities.PasswordResetRequest", b =>
-                {
-                    b.Property<Guid>("PasswordResetRequestId")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid")
-                        .HasColumnName("password_reset_request_id")
-                        .HasDefaultValueSql("gen_random_uuid()");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("created_at")
-                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
-
-                    b.Property<DateTime>("ExpiresAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("expires_at");
-
-                    b.Property<string>("OtpHash")
-                        .IsRequired()
-                        .HasMaxLength(255)
-                        .HasColumnType("character varying(255)")
-                        .HasColumnName("otp_hash");
-
-                    b.Property<string>("Token")
-                        .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("character varying(200)")
-                        .HasColumnName("token");
-
-                    b.Property<bool>("Used")
-                        .HasColumnType("boolean")
-                        .HasColumnName("used");
-
-                    b.Property<Guid>("UserId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("user_id");
-
-                    b.HasKey("PasswordResetRequestId")
-                        .HasName("password_reset_requests_pkey");
-
-                    b.HasIndex("UserId");
-
-                    b.HasIndex(new[] { "Token" }, "password_reset_requests_token_key")
-                        .IsUnique();
-
-                    b.ToTable("password_reset_requests", (string)null);
                 });
 
             modelBuilder.Entity("Domain.Entities.Role", b =>
@@ -121,7 +75,8 @@ namespace Infrastructure.Migrations
                         .HasDefaultValueSql("gen_random_uuid()");
 
                     b.Property<string>("AvatarUrl")
-                        .HasColumnType("text")
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)")
                         .HasColumnName("avatar_url");
 
                     b.Property<DateTime?>("CreatedAt")
@@ -233,18 +188,6 @@ namespace Infrastructure.Migrations
                     b.ToTable("user_roles", (string)null);
                 });
 
-            modelBuilder.Entity("Domain.Entities.PasswordResetRequest", b =>
-                {
-                    b.HasOne("Domain.Entities.User", "User")
-                        .WithMany("PasswordResetRequests")
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired()
-                        .HasConstraintName("password_reset_requests_user_id_fkey");
-
-                    b.Navigation("User");
-                });
-
             modelBuilder.Entity("Domain.Entities.UserRole", b =>
                 {
                     b.HasOne("Domain.Entities.Role", "Role")
@@ -273,8 +216,6 @@ namespace Infrastructure.Migrations
 
             modelBuilder.Entity("Domain.Entities.User", b =>
                 {
-                    b.Navigation("PasswordResetRequests");
-
                     b.Navigation("UserRoles");
                 });
 #pragma warning restore 612, 618

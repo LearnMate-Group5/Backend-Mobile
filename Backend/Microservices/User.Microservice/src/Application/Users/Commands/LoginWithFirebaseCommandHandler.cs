@@ -14,6 +14,7 @@ using SharedLibrary.Authentication;
 using SharedLibrary.Common.ResponseModel;
 using SharedLibrary.Contracts.UserCreating;
 using SharedLibrary.Extensions;
+using Domain.Constants;
 
 namespace Application.Users.Commands;
 
@@ -144,7 +145,13 @@ public class LoginWithFirebaseCommandHandler : IRequestHandler<LoginWithFirebase
             user.AvatarUrl = payload.PictureUrl;
         }
 
+        if (!user.IsActive)
+        {
+            return Result.Failure<LoginResponse>(new Error("Auth.UserInactive", "Account has been disabled."));
+        }
+
         user.IsVerified = payload.EmailVerified;
+        user.IsActive = true;
         user.UpdatedAt = DateTimeExtensions.PostgreSqlUtcNow;
 
         var roles = user.UserRoles?.Select(ur => ur.Role.RoleName).ToList() ?? new List<string>();
@@ -163,7 +170,7 @@ public class LoginWithFirebaseCommandHandler : IRequestHandler<LoginWithFirebase
             AccessToken: accessToken,
             RefreshToken: refreshToken,
             ExpiresAt: DateTimeExtensions.PostgreSqlUtcNow.AddMinutes(60),
-            User: new UserInfo(user.UserId, user.Name, user.Email, roles)
+            User: new UserInfo(user.UserId, user.Name, user.Email, roles, UserStatus.FromBool(user.IsActive))
         );
 
         return Result.Success(response);

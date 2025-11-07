@@ -7,6 +7,7 @@ using SharedLibrary.Common.ResponseModel;
 using SharedLibrary.Abstractions.Messaging;
 using Domain.Repositories;
 using Microsoft.EntityFrameworkCore;
+using Domain.Constants;
 
 namespace Application.Users.Queries
 {
@@ -39,6 +40,10 @@ namespace Application.Users.Queries
                     u.UserId,
                     u.Name,
                     u.Email,
+                    u.DateOfBirth,
+                    u.Gender,
+                    u.PhoneNumber,
+                    u.IsActive ? UserStatus.Active : UserStatus.Inactive,
                     u.IsVerified,
                     u.IsActive,
                     u.AvatarUrl,

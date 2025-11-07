@@ -15,6 +15,19 @@ DotNetEnv.Env.Load();
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Configure Kestrel to handle large multipart/form-data uploads
+builder.Services.Configure<Microsoft.AspNetCore.Server.Kestrel.Core.KestrelServerOptions>(options =>
+{
+    options.Limits.MaxRequestBodySize = 104857600; // 100 MB
+});
+
+builder.Services.Configure<Microsoft.AspNetCore.Http.Features.FormOptions>(options =>
+{
+    options.MultipartBodyLengthLimit = 104857600; // 100 MB
+    options.ValueLengthLimit = 104857600;
+    options.MultipartHeadersLengthLimit = 104857600;
+});
+
 string GetEnv(string key, string def) => Environment.GetEnvironmentVariable(key) ?? def;
 var runningInContainer = string.Equals(
     Environment.GetEnvironmentVariable("DOTNET_RUNNING_IN_CONTAINER"),
@@ -107,19 +120,32 @@ void AddRoute(string prefix, string serviceSegment, string host, int port)
 {
     var swaggerKey = prefix.ToLowerInvariant();
 
-    routes.Add(new JsonObject
+    JsonObject BuildRoute(string upstreamTemplate, string downstreamTemplate, bool includeSwaggerKey)
     {
-        ["UpstreamPathTemplate"] = $"/api/{serviceSegment}/{{everything}}",
-        ["UpstreamHttpMethod"] = new JsonArray("Get", "Post", "Put", "Delete", "Options"),
-        ["DownstreamScheme"] = "http",
-        ["DownstreamHostAndPorts"] = new JsonArray(new JsonObject
+        var route = new JsonObject
         {
-            ["Host"] = host,
-            ["Port"] = port
-        }),
-        ["DownstreamPathTemplate"] = $"/api/{serviceSegment}/{{everything}}",
-        ["SwaggerKey"] = swaggerKey
-    });
+            ["UpstreamPathTemplate"] = upstreamTemplate,
+            ["UpstreamHttpMethod"] = new JsonArray("Get", "Post", "Put", "Delete", "Options"),
+            ["DownstreamScheme"] = "http",
+            ["DownstreamHostAndPorts"] = new JsonArray(new JsonObject
+            {
+                ["Host"] = host,
+                ["Port"] = port
+            }),
+            ["DownstreamPathTemplate"] = downstreamTemplate
+        };
+
+        if (includeSwaggerKey)
+        {
+            route["SwaggerKey"] = swaggerKey;
+        }
+
+        return route;
+    }
+
+    // Ensure both root and nested endpoints are forwarded.
+    routes.Add(BuildRoute($"/api/{serviceSegment}", $"/api/{serviceSegment}", includeSwaggerKey: false));
+    routes.Add(BuildRoute($"/api/{serviceSegment}/{{everything}}", $"/api/{serviceSegment}/{{everything}}", includeSwaggerKey: true));
 }
 
 int ResolvePort(string? envPort, int containerDefault, int localDefault)

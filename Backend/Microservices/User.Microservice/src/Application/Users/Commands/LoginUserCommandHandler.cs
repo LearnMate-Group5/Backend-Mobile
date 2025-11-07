@@ -6,6 +6,7 @@ using SharedLibrary.Authentication;
 using SharedLibrary.Common.ResponseModel;
 using SharedLibrary.Abstractions.UnitOfWork;
 using SharedLibrary.Extensions;
+using Domain.Constants;
 
 namespace Application.Users.Commands;
 
@@ -43,6 +44,11 @@ public class LoginUserCommandHandler : IRequestHandler<LoginUserCommand, Result<
             return Result.Failure<LoginResponse>(new Error("Auth.InvalidCredentials", "Invalid email or password"));
         }
 
+        if (!user.IsActive)
+        {
+            return Result.Failure<LoginResponse>(new Error("Auth.UserInactive", "Account has been disabled."));
+        }
+
         // Verify password
         if (string.IsNullOrWhiteSpace(user.PasswordHash) ||
             !_passwordHasher.VerifyPassword(request.Password, user.PasswordHash))
@@ -60,12 +66,14 @@ public class LoginUserCommandHandler : IRequestHandler<LoginUserCommand, Result<
         // Update user with refresh token (tracked entity; do not call Update to avoid overwriting immutable fields)
         user.RefreshToken = refreshToken;
         user.RefreshTokenExpiry = DateTimeExtensions.PostgreSqlUtcNow.AddDays(7); // timestamptz requires UTC
+        user.IsActive = true;
+        user.UpdatedAt = DateTimeExtensions.PostgreSqlUtcNow;
 
         var response = new LoginResponse(
             AccessToken: accessToken,
             RefreshToken: refreshToken,
             ExpiresAt: DateTimeExtensions.PostgreSqlUtcNow.AddMinutes(60), // client-facing info only
-            User: new UserInfo(user.UserId, user.Name, user.Email, roles)
+            User: new UserInfo(user.UserId, user.Name, user.Email, roles, UserStatus.FromBool(user.IsActive))
         );
 
         return Result.Success(response);

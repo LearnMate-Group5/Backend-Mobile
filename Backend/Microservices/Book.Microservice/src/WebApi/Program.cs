@@ -15,6 +15,19 @@ if (!string.IsNullOrWhiteSpace(solutionDirectory))
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Configure Kestrel to handle large file uploads
+builder.Services.Configure<Microsoft.AspNetCore.Server.Kestrel.Core.KestrelServerOptions>(options =>
+{
+    options.Limits.MaxRequestBodySize = 104857600; // 100 MB
+});
+
+builder.Services.Configure<Microsoft.AspNetCore.Http.Features.FormOptions>(options =>
+{
+    options.MultipartBodyLengthLimit = 104857600; // 100 MB
+    options.ValueLengthLimit = 104857600;
+    options.MultipartHeadersLengthLimit = 104857600;
+});
+
 builder.Host.UseSerilog((context, loggerConfiguration) =>
     loggerConfiguration.ReadFrom.Configuration(context.Configuration));
 
@@ -104,7 +117,14 @@ app.UseSerilogRequestLogging();
 
 if (!app.Environment.IsDevelopment())
 {
-    app.UseHttpsRedirection();
+    if (HasHttpsEndpointConfigured())
+    {
+        app.UseHttpsRedirection();
+    }
+    else
+    {
+        logger.LogInformation("HTTPS redirection skipped because no HTTPS endpoint is configured.");
+    }
 }
 
 app.UseMiddleware<JwtMiddleware>();
@@ -118,6 +138,25 @@ logger.LogInformation(
     Environment.GetEnvironmentVariable("ASPNETCORE_URLS") ?? "5004");
 
 app.Run();
+
+static bool HasHttpsEndpointConfigured()
+{
+    var urls = Environment.GetEnvironmentVariable("ASPNETCORE_URLS");
+    if (!string.IsNullOrWhiteSpace(urls))
+    {
+        var endpoints = urls
+            .Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+
+        if (endpoints.Any(url =>
+                Uri.TryCreate(url, UriKind.Absolute, out var uri) &&
+                string.Equals(uri.Scheme, Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase)))
+        {
+            return true;
+        }
+    }
+
+    return !string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("ASPNETCORE_HTTPS_PORT"));
+}
 
 static void EnsureBooksImageColumn(MyDbContext dbContext, Microsoft.Extensions.Logging.ILogger logger)
 {

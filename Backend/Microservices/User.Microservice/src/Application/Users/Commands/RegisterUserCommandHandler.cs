@@ -12,13 +12,17 @@ using MediatR;
 using SharedLibrary.Contracts.UserCreating;
 using SharedLibrary.Authentication;
 using SharedLibrary.Extensions;
+using Domain.Constants;
 
 namespace Application.Users.Commands
 {
     public sealed record RegisterUserCommand(
-        string Name,
+        string FullName,
         string Email,
-        string Password
+        string Password,
+        DateTime DateOfBirth,
+        string Gender,
+        string PhoneNumber
     ) : ICommand;
     internal sealed class RegisterUserCommandHandler : ICommandHandler<RegisterUserCommand>
     {
@@ -53,10 +57,14 @@ namespace Application.Users.Commands
 
             var user = _mapper.Map<User>(command) ?? new User { UserId = Guid.NewGuid() };
             user.Email = normalizedEmail;
-            user.Name = command.Name.Trim();
+            user.Name = command.FullName.Trim();
             user.PasswordHash = _passwordHasher.HashPassword(command.Password);
             user.CreatedAt = DateTimeExtensions.PostgreSqlUtcNow;
             user.IsVerified = false; // Newly registered users are not verified yet.
+            user.DateOfBirth = command.DateOfBirth;
+            user.Gender = command.Gender.Trim();
+            user.PhoneNumber = command.PhoneNumber.Trim();
+            user.IsActive = false;
             
             // Find or create default "User" role
             var userRole = await _roleRepository.GetByNameAsync("User", cancellationToken);
@@ -85,7 +93,7 @@ namespace Application.Users.Commands
             
             await _publishEndpoint.Publish(new UserCreatingSagaStart {
                 CorrelationId = Guid.NewGuid(),
-                Name = command.Name,
+                Name = command.FullName,
                 Email = normalizedEmail
             }, cancellationToken);
             return Result.Success();

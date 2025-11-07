@@ -56,10 +56,20 @@ services = {
       { name = "REDIS_HOST", value = "redis" },
       { name = "REDIS_PASSWORD", value = "0Kg04Rs05!" },
       { name = "REDIS_PORT", value = "6379" },
-      { name = "Jwt__SecretKey", value = "YourSuperSecretKeyThatIsAtLeast32CharactersLong!@#$%^&*()" },
-      { name = "Jwt__Issuer", value = "UserMicroservice" },
-      { name = "Jwt__Audience", value = "MicroservicesApp" },
-      { name = "Jwt__ExpirationMinutes", value = "60" }
+  { name = "Jwt__SecretKey", value = "YourSuperSecretKeyThatIsAtLeast32CharactersLong!@#$%^&*()" },
+  { name = "Jwt__Issuer", value = "UserMicroservice" },
+  { name = "Jwt__Audience", value = "MicroservicesApp" },
+  { name = "Jwt__ExpirationMinutes", value = "60" },
+  { name = "SMTP_HOST", value = "smtp.gmail.com" },
+  { name = "SMTP_PORT", value = "587" },
+  { name = "SMTP_SECURE", value = "true" },
+  { name = "SMTP_USER", value = "mainee5704@gmail.com" },
+  { name = "SMTP_PASS", value = "eukoxdaibqyyqgxr" },
+  { name = "SMTP_FROM_NAME", value = "Learn Mate" },
+  { name = "SMTP_FROM_EMAIL", value = "mainee5704@gmail.com" },
+  { name = "AUTO_APPLY_MIGRATIONS", value = "true" },
+  { name = "Cors__AllowedOrigins__0", value = "http://localhost:2406" },
+  { name = "ConnectionStrings__DefaultConnection", value = "Host=pg-2-database25812.g.aivencloud.com;Port=19217;Database=userdb;Username=avnadmin;Password=AVNS_vsIotPLRrxJUhcJlM0m;Ssl Mode=Require;" }
     ]
 
     ecs_container_health_check = {

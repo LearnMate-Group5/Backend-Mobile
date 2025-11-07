@@ -6,6 +6,7 @@ using Application.Users.Commands;
 using Application.Users.Queries;
 using AutoMapper;
 using Domain.Entities;
+using Domain.Constants;
 
 namespace Application.Common.Mapper
 {
@@ -14,6 +15,7 @@ namespace Application.Common.Mapper
         public AutoMapperProfile()
         {
             CreateMap<RegisterUserCommand, User>()
+                .ForMember(dest => dest.Name, opt => opt.MapFrom(src => src.FullName))
                 .ForMember(dest => dest.PasswordHash, opt => opt.Ignore())
                 .ForMember(dest => dest.RefreshToken, opt => opt.Ignore())
                 .ForMember(dest => dest.RefreshTokenExpiry, opt => opt.Ignore())
@@ -21,10 +23,12 @@ namespace Application.Common.Mapper
                 .ForMember(dest => dest.IsVerified, opt => opt.MapFrom(src => false));
             
             CreateMap<User, RegisterUserCommand>()
-                .ForMember(dest => dest.Password, opt => opt.Ignore());
+                .ForMember(dest => dest.Password, opt => opt.Ignore())
+                .ForMember(dest => dest.FullName, opt => opt.MapFrom(src => src.Name));
 
             CreateMap<GetUserResponse, User>();
-            CreateMap<User, GetUserResponse>();
+            CreateMap<User, GetUserResponse>()
+                .ForMember(dest => dest.Status, opt => opt.MapFrom(src => UserStatus.FromBool(src.IsActive)));
         }
         
     }
