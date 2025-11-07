@@ -227,9 +227,10 @@ resource "aws_service_discovery_private_dns_namespace" "ecs_namespace" {
   tags        = { Name = "${var.project_name}-dns-namespace" }
 }
 
-# ECS Module - Server-1 (RabbitMQ + Redis only)
+# ECS Module - Server-1 (RabbitMQ + Redis + Book + Subscription)
 # Starts in parallel with server-3 immediately after EC2 instances are ready
 # wait_for_steady_state=true ensures service reaches stable state before server-2 starts
+# Task uses 90% of t3.micro resources (1843 CPU, 921 MB)
 module "ecs_server1" {
   source = "./modules/ecs"
 
@@ -278,15 +279,36 @@ module "ecs_server1" {
             port     = var.services["redis"].ecs_container_port_mappings[0].container_port
           }
         ]
+      },
+      {
+        port_name      = var.services["book"].ecs_service_connect_port_name
+        discovery_name = var.services["book"].ecs_service_connect_discovery_name
+        client_aliases = [
+          {
+            dns_name = var.services["book"].ecs_service_connect_dns_name
+            port     = var.services["book"].ecs_container_port_mappings[0].container_port
+          }
+        ]
+      },
+      {
+        port_name      = var.services["subscription"].ecs_service_connect_port_name
+        discovery_name = var.services["subscription"].ecs_service_connect_discovery_name
+        client_aliases = [
+          {
+            dns_name = var.services["subscription"].ecs_service_connect_dns_name
+            port     = var.services["subscription"].ecs_container_port_mappings[0].container_port
+          }
+        ]
       }
-      # Note: API Gateway, User, AI, n8n services auto-discovered via Service Connect namespace
+      # Note: API Gateway, User, AI, Payment, n8n services auto-discovered via Service Connect namespace
     ]
   }
 
   service_definitions = {
     server-1 = {
-      task_cpu         = var.services["rabbitmq"].ecs_container_cpu + var.services["redis"].ecs_container_cpu + 64
-      task_memory      = var.services["rabbitmq"].ecs_container_memory + var.services["redis"].ecs_container_memory + 64
+      # 90% of t3.micro: 1843 CPU units, 921 MB memory
+      task_cpu         = 1843
+      task_memory      = 921
       desired_count    = 1
       assign_public_ip = false
       placement_constraints = [
@@ -358,6 +380,52 @@ module "ecs_server1" {
             }
           ]
           depends_on = []
+        },
+        {
+          # Book microservice - consumes RabbitMQ/Redis
+          # Split remaining resources equally: 721 CPU, 260 MB
+          name                 = "book-microservice"
+          image_repository_url = var.services["book"].ecs_container_image_repository_url
+          image_tag            = var.services["book"].ecs_container_image_tag
+          cpu                  = 721
+          memory               = 260
+          essential            = var.services["book"].ecs_container_essential
+          port_mappings        = var.services["book"].ecs_container_port_mappings
+          environment_variables = [
+            for env_var in var.services["book"].ecs_environment_variables :
+            env_var
+          ]
+          health_check = {
+            command     = var.services["book"].ecs_container_health_check.command
+            interval    = var.services["book"].ecs_container_health_check.interval
+            timeout     = var.services["book"].ecs_container_health_check.timeout
+            retries     = var.services["book"].ecs_container_health_check.retries
+            startPeriod = var.services["book"].ecs_container_health_check.startPeriod
+          }
+          depends_on = ["rabbitmq", "redis"]
+        },
+        {
+          # Subscription microservice - consumes RabbitMQ/Redis
+          # Split remaining resources equally: 722 CPU, 261 MB
+          name                 = "subscription-microservice"
+          image_repository_url = var.services["subscription"].ecs_container_image_repository_url
+          image_tag            = var.services["subscription"].ecs_container_image_tag
+          cpu                  = 722
+          memory               = 261
+          essential            = var.services["subscription"].ecs_container_essential
+          port_mappings        = var.services["subscription"].ecs_container_port_mappings
+          environment_variables = [
+            for env_var in var.services["subscription"].ecs_environment_variables :
+            env_var
+          ]
+          health_check = {
+            command     = var.services["subscription"].ecs_container_health_check.command
+            interval    = var.services["subscription"].ecs_container_health_check.interval
+            timeout     = var.services["subscription"].ecs_container_health_check.timeout
+            retries     = var.services["subscription"].ecs_container_health_check.retries
+            startPeriod = var.services["subscription"].ecs_container_health_check.startPeriod
+          }
+          depends_on = ["rabbitmq", "redis"]
         }
       ]
 
@@ -549,9 +617,10 @@ EOT
   depends_on = [module.ec2]
 }
 
-# ECS Module - Server-2 (User + AI + API Gateway)
-# Deploys AFTER server-1 (RabbitMQ/Redis) and server-3 (n8n) reach steady state
+# ECS Module - Server-2 (User + AI + Payment + API Gateway)
+# Deploys AFTER server-1 (RabbitMQ/Redis/Book/Subscription) and server-3 (n8n) reach steady state
 # This ensures all required dependencies are available before microservices start
+# Task uses 90% of t3.micro resources (1843 CPU, 921 MB) split equally among 4 containers
 module "ecs_server2" {
   source = "./modules/ecs"
 
@@ -594,28 +663,6 @@ module "ecs_server2" {
         ]
       },
       {
-        # Publish subscription microservice to namespace
-        port_name      = var.services["subscription"].ecs_service_connect_port_name
-        discovery_name = var.services["subscription"].ecs_service_connect_discovery_name
-        client_aliases = [
-          {
-            dns_name = var.services["subscription"].ecs_service_connect_dns_name
-            port     = var.services["subscription"].ecs_container_port_mappings[0].container_port
-          }
-        ]
-      },
-      {
-        # Publish book microservice to namespace
-        port_name      = var.services["book"].ecs_service_connect_port_name
-        discovery_name = var.services["book"].ecs_service_connect_discovery_name
-        client_aliases = [
-          {
-            dns_name = var.services["book"].ecs_service_connect_dns_name
-            port     = var.services["book"].ecs_container_port_mappings[0].container_port
-          }
-        ]
-      },
-      {
         # Publish payment microservice to namespace
         port_name      = var.services["payment"].ecs_service_connect_port_name
         discovery_name = var.services["payment"].ecs_service_connect_discovery_name
@@ -648,14 +695,15 @@ module "ecs_server2" {
           }
         ]
       }
-      # Note: RabbitMQ, Redis, and n8n auto-discovered via Service Connect namespace
+      # Note: RabbitMQ, Redis, Book, Subscription, and n8n auto-discovered via Service Connect namespace
     ]
   }
 
   service_definitions = {
     server-2 = {
-      task_cpu            = var.services["apigateway"].ecs_container_cpu + var.services["user"].ecs_container_cpu + var.services["ai"].ecs_container_cpu + var.services["book"].ecs_container_cpu + var.services["subscription"].ecs_container_cpu + var.services["payment"].ecs_container_cpu + 64
-      task_memory         = var.services["apigateway"].ecs_container_memory + var.services["user"].ecs_container_memory + var.services["ai"].ecs_container_memory + var.services["book"].ecs_container_memory + var.services["subscription"].ecs_container_memory + var.services["payment"].ecs_container_memory + 64
+      # 90% of t3.micro: 1843 CPU units, 921 MB memory (split equally among 4 containers)
+      task_cpu            = 1843
+      task_memory         = 921
       desired_count       = 1
       assign_public_ip    = false
       enable_auto_scaling = false
@@ -671,11 +719,12 @@ module "ecs_server2" {
       containers = [
         {
           # User microservice - consumes RabbitMQ/Redis from server-1
+          # Equal split: 461 CPU, 231 MB
           name                 = "user-microservice"
           image_repository_url = var.services["user"].ecs_container_image_repository_url
           image_tag            = var.services["user"].ecs_container_image_tag
-          cpu                  = var.services["user"].ecs_container_cpu
-          memory               = var.services["user"].ecs_container_memory
+          cpu                  = 461
+          memory               = 231
           essential            = var.services["user"].ecs_container_essential
           port_mappings        = var.services["user"].ecs_container_port_mappings
           environment_variables = [
@@ -692,56 +741,13 @@ module "ecs_server2" {
           depends_on = []
         },
         {
-          # User microservice - consumes RabbitMQ/Redis from server-1
-          name                 = "book-microservice"
-          image_repository_url = var.services["book"].ecs_container_image_repository_url
-          image_tag            = var.services["book"].ecs_container_image_tag
-          cpu                  = var.services["book"].ecs_container_cpu
-          memory               = var.services["book"].ecs_container_memory
-          essential            = var.services["book"].ecs_container_essential
-          port_mappings        = var.services["book"].ecs_container_port_mappings
-          environment_variables = [
-            for env_var in var.services["book"].ecs_environment_variables :
-            env_var
-          ]
-          health_check = {
-            command     = var.services["book"].ecs_container_health_check.command
-            interval    = var.services["book"].ecs_container_health_check.interval
-            timeout     = var.services["book"].ecs_container_health_check.timeout
-            retries     = var.services["book"].ecs_container_health_check.retries
-            startPeriod = var.services["book"].ecs_container_health_check.startPeriod
-          }
-          depends_on = []
-        },
-         {
-          # Subscription microservice - consumes RabbitMQ/Redis from server-1
-          name                 = "subscription-microservice"
-          image_repository_url = var.services["subscription"].ecs_container_image_repository_url
-          image_tag            = var.services["subscription"].ecs_container_image_tag
-          cpu                  = var.services["subscription"].ecs_container_cpu
-          memory               = var.services["subscription"].ecs_container_memory
-          essential            = var.services["subscription"].ecs_container_essential
-          port_mappings        = var.services["subscription"].ecs_container_port_mappings
-          environment_variables = [
-            for env_var in var.services["subscription"].ecs_environment_variables :
-            env_var
-          ]
-          health_check = {
-            command     = var.services["subscription"].ecs_container_health_check.command
-            interval    = var.services["subscription"].ecs_container_health_check.interval
-            timeout     = var.services["subscription"].ecs_container_health_check.timeout
-            retries     = var.services["subscription"].ecs_container_health_check.retries
-            startPeriod = var.services["subscription"].ecs_container_health_check.startPeriod
-          }
-          depends_on = []
-        },
-        {
           # Payment microservice - consumes RabbitMQ/Redis from server-1
+          # Equal split: 461 CPU, 230 MB
           name                 = "payment-microservice"
           image_repository_url = var.services["payment"].ecs_container_image_repository_url
           image_tag            = var.services["payment"].ecs_container_image_tag
-          cpu                  = var.services["payment"].ecs_container_cpu
-          memory               = var.services["payment"].ecs_container_memory
+          cpu                  = 461
+          memory               = 230
           essential            = var.services["payment"].ecs_container_essential
           port_mappings        = var.services["payment"].ecs_container_port_mappings
           environment_variables = concat(
@@ -771,12 +777,13 @@ module "ecs_server2" {
           depends_on = []
         },
         {
-          # AI microservice - relies on n8n service running on server-1
+          # AI microservice - relies on n8n service running on server-3
+          # Equal split: 460 CPU, 230 MB
           name                 = "ai-microservice"
           image_repository_url = var.services["ai"].ecs_container_image_repository_url
           image_tag            = var.services["ai"].ecs_container_image_tag
-          cpu                  = var.services["ai"].ecs_container_cpu
-          memory               = var.services["ai"].ecs_container_memory
+          cpu                  = 460
+          memory               = 230
           essential            = var.services["ai"].ecs_container_essential
           port_mappings        = var.services["ai"].ecs_container_port_mappings
           environment_variables = var.enable_service_connect ? concat(
@@ -802,12 +809,13 @@ module "ecs_server2" {
           depends_on = []
         },
         {
-          # API Gateway - depends on User and AI microservices
+          # API Gateway - depends on User, AI, and Payment microservices
+          # Equal split: 461 CPU, 230 MB
           name                 = "api-gateway"
           image_repository_url = var.services["apigateway"].ecs_container_image_repository_url
           image_tag            = var.services["apigateway"].ecs_container_image_tag
-          cpu                  = var.services["apigateway"].ecs_container_cpu
-          memory               = var.services["apigateway"].ecs_container_memory
+          cpu                  = 461
+          memory               = 230
           essential            = var.services["apigateway"].ecs_container_essential
           port_mappings        = var.services["apigateway"].ecs_container_port_mappings
           environment_variables = [
@@ -821,7 +829,7 @@ module "ecs_server2" {
             retries     = var.services["apigateway"].ecs_container_health_check.retries
             startPeriod = var.services["apigateway"].ecs_container_health_check.startPeriod
           }
-          depends_on = ["user-microservice", "ai-microservice", "book-microservice", "subscription-microservice", "payment-microservice"]
+          depends_on = ["user-microservice", "ai-microservice", "payment-microservice"]
         }
       ]
 

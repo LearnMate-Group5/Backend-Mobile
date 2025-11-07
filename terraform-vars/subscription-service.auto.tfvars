@@ -28,8 +28,8 @@ services = {
     ecs_container_name_suffix          = "microservice"
     ecs_container_image_repository_url = "936910352865.dkr.ecr.us-east-1.amazonaws.com/learnmate-infrastructure-chooy5704-ecr"
     ecs_container_image_tag            = "Subscription.Microservice-latest"
-    ecs_container_cpu                  = 120
-    ecs_container_memory               = 120
+    ecs_container_cpu                  = 722
+    ecs_container_memory               = 261
     ecs_container_essential            = true
     ecs_container_port_mappings = [
       {
