@@ -64,8 +64,8 @@ namespace Application.Users.Commands
             user.DateOfBirth = command.DateOfBirth;
             user.Gender = command.Gender.Trim();
             user.PhoneNumber = command.PhoneNumber.Trim();
-            user.IsActive = false;
-            
+            user.IsActive = true; // Set user as active immediately upon registration
+
             // Find or create default "User" role
             var userRole = await _roleRepository.GetByNameAsync("User", cancellationToken);
             if (userRole == null)
@@ -78,9 +78,9 @@ namespace Application.Users.Commands
                 };
                 await _roleRepository.AddAsync(userRole, cancellationToken);
             }
-            
+
             await _userRepository.AddAsync(user, cancellationToken);
-            
+
             // Assign default role to user
             var userRoleAssignment = new UserRole
             {
@@ -88,10 +88,11 @@ namespace Application.Users.Commands
                 RoleId = userRole.RoleId,
                 AssignedAt = DateTimeExtensions.PostgreSqlUtcNow
             };
-            
+
             await _userRoleRepository.AddAsync(userRoleAssignment, cancellationToken);
-            
-            await _publishEndpoint.Publish(new UserCreatingSagaStart {
+
+            await _publishEndpoint.Publish(new UserCreatingSagaStart
+            {
                 CorrelationId = Guid.NewGuid(),
                 Name = command.FullName,
                 Email = normalizedEmail
