@@ -17,6 +17,7 @@ using SharedLibrary.Adapters;
 using MassTransit;
 using Application.Payments.Services;
 using Domain.Configs;
+using Domain.Repositories;
 using SharedLibrary.Contracts;
 
 namespace Infrastructure
@@ -29,6 +30,7 @@ namespace Infrastructure
             services.AddScoped<IUnitOfWork, UnitOfWork>();
             services.AddScoped<ISaveChangesUnitOfWork, SaveChangesUnitOfWorkAdapter>();
             services.AddScoped(typeof(IRepository<>), typeof(Repository<>));
+            services.AddScoped<IPaymentTransactionRepository, PaymentTransactionRepository>();
 
             // Register ZaloPay service with configured HttpClient
             services.AddHttpClient<IZaloPayService, ZaloPayService>()
@@ -131,7 +133,7 @@ namespace Infrastructure
             {
                 // Enable TLS 1.2 and 1.3 (required by MoMo/ZaloPay)
                 SslProtocols = SslProtocols.Tls12 | SslProtocols.Tls13,
-                
+
                 // Increase timeout for cross-region calls (AWS US -> Vietnam)
                 ServerCertificateCustomValidationCallback = (message, cert, chain, sslPolicyErrors) =>
                 {
@@ -144,16 +146,16 @@ namespace Infrastructure
                     Console.WriteLine($"SSL Policy Error: {sslPolicyErrors}");
                     return false;
                 },
-                
+
                 // Connection pooling settings
                 MaxConnectionsPerServer = 10,
-                
+
                 // Enable automatic decompression
                 AutomaticDecompression = DecompressionMethods.GZip | DecompressionMethods.Deflate,
-                
+
                 // Use default credentials
                 UseDefaultCredentials = false,
-                
+
                 // Connection keep-alive
                 UseCookies = false
             };

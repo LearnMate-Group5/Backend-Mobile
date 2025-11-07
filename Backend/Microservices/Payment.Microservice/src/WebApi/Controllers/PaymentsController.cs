@@ -4,6 +4,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Application.Payments.Commands;
 using Application.Payments.DTOs;
+using Application.Payments.Queries;
 using Application.Payments.Services;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
@@ -228,6 +229,52 @@ namespace WebApi.Controllers
                 _logger.LogError(ex, "Error querying ZaloPay order for AppTransId: {AppTransId}", appTransId);
                 return StatusCode(500, new { error = "Internal server error" });
             }
+        }
+
+        /// <summary>
+        /// Get payment history for the logged-in user
+        /// </summary>
+        /// <param name="pageNumber">Page number (default: 1)</param>
+        /// <param name="pageSize">Page size (default: 10, max: 100)</param>
+        /// <param name="status">Filter by payment status (optional)</param>
+        /// <param name="paymentGateway">Filter by payment gateway (optional)</param>
+        /// <param name="cancellationToken">Cancellation token</param>
+        /// <returns>Paginated list of payment transactions</returns>
+        [HttpGet("history")]
+        [Authorize("User", "Admin")]
+        public async Task<IActionResult> GetPaymentHistory(
+            [FromQuery] int pageNumber = 1,
+            [FromQuery] int pageSize = 10,
+            [FromQuery] string? status = null,
+            [FromQuery] string? paymentGateway = null,
+            CancellationToken cancellationToken = default)
+        {
+            // Get the logged-in user ID from JWT claims
+            var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value
+                         ?? User.FindFirst("sub")?.Value
+                         ?? User.FindFirst("userId")?.Value;
+
+            if (string.IsNullOrWhiteSpace(userId))
+            {
+                return BadRequest(new { message = "User ID not found in authentication token" });
+            }
+
+            var query = new GetPaymentHistoryQuery(
+                UserId: userId,
+                PageNumber: pageNumber,
+                PageSize: pageSize,
+                Status: status,
+                PaymentGateway: paymentGateway
+            );
+
+            var result = await _mediator.Send(query, cancellationToken);
+
+            if (result.IsFailure)
+            {
+                return HandleFailure(result);
+            }
+
+            return Ok(result.Value);
         }
 
         /// <summary>
