@@ -7,6 +7,7 @@ using Serilog;
 using SharedLibrary.Authentication;
 using SharedLibrary.Middleware;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.HttpOverrides;
 
 var solutionDirectory = Directory.GetParent(Directory.GetCurrentDirectory())?.FullName ?? string.Empty;
 if (!string.IsNullOrWhiteSpace(solutionDirectory))
@@ -18,6 +19,15 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Host.UseSerilog((context, loggerConfiguration) =>
     loggerConfiguration.ReadFrom.Configuration(context.Configuration));
+
+builder.Services.Configure<ForwardedHeadersOptions>(options =>
+{
+    options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | 
+                               ForwardedHeaders.XForwardedProto | 
+                               ForwardedHeaders.XForwardedHost;
+    options.KnownNetworks.Clear();
+    options.KnownProxies.Clear();
+});
 
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
@@ -82,6 +92,8 @@ using (var scope = app.Services.CreateScope())
 
 app.MapGet("/health", () => new { status = "ok" });
 app.MapGet("/api/health", () => new { status = "ok" });
+
+app.UseForwardedHeaders();
 
 app.UseSwagger();
 app.UseSwaggerUI(c =>
