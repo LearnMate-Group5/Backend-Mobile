@@ -16,3 +16,11 @@ associate_public_ip = true
 enable_auto_scaling = false
 
 enable_service_connect = true
+
+# HTTPS/SSL Configuration
+# To enable HTTPS, replace the certificate_arn value with your ACM certificate ARN
+# Example: certificate_arn = "arn:aws:acm:us-east-1:123456789012:certificate/12345678-1234-1234-1234-123456789012"
+# To get a certificate, run:
+#   aws acm request-certificate --domain-name your-domain.com --validation-method DNS --region us-east-1
+certificate_arn       = null  # Set to your ACM certificate ARN to enable HTTPS
+enable_https_redirect = true  # When HTTPS is enabled, redirect all HTTP traffic to HTTPS
