@@ -1,8 +1,3 @@
-# Managed "CachingDisabled" policy
-data "aws_cloudfront_cache_policy" "caching_disabled" {
-  name = "Managed-CachingDisabled"
-}
-
 # Origin Request Policy (no Host in CF header list)
 resource "aws_cloudfront_origin_request_policy" "include_cloudfront_headers" {
   name    = "${var.project_name}-cloudfront-headers-policy"
@@ -64,8 +59,8 @@ resource "aws_cloudfront_distribution" "alb_distribution" {
     compress               = var.compress
     viewer_protocol_policy = var.viewer_protocol_policy
 
-    # Modern policies ONLY (no forwarded_values, no TTLs):
-    cache_policy_id          = data.aws_cloudfront_cache_policy.caching_disabled.id
+    # AWS Managed CachingDisabled Policy ID (same across all regions)
+    cache_policy_id          = "4135ea2d-6df8-44a3-9df3-4b5a84be39ad"
     origin_request_policy_id = aws_cloudfront_origin_request_policy.include_cloudfront_headers.id
   }
 
