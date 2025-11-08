@@ -43,6 +43,7 @@ services = {
     ecs_environment_variables = [
       { name = "ASPNETCORE_ENVIRONMENT", value = "Production" },
       { name = "ASPNETCORE_URLS", value = "http://+:5003" },
+      { name = "USE_HTTPS", value = "true" },
       { name = "AiWebhook__Endpoint", value = "http://n8n.chooy.svc:5678/webhook/upload-and-translate" },
       { name = "AiWebhook__TimeoutSeconds", value = "120" },
       { name = "DATABASE_HOST", value = "pg-2-database25812.g.aivencloud.com" },
