@@ -326,6 +326,28 @@ bool enableSwaggerUi = string.Equals(
 var app = builder.Build();
 
 app.UseForwardedHeaders();
+
+// Ensure downstream components (Swagger, redirects, etc.) respect the original viewer scheme.
+app.Use((ctx, next) =>
+{
+    var protoHeader = ctx.Request.Headers["CloudFront-Forwarded-Proto"].FirstOrDefault()
+                      ?? ctx.Request.Headers["X-Forwarded-Proto"].FirstOrDefault();
+
+    if (!string.IsNullOrWhiteSpace(protoHeader))
+    {
+        var normalized = protoHeader.Split(',', StringSplitOptions.RemoveEmptyEntries)
+            .FirstOrDefault()
+            ?.Trim();
+
+        if (!string.IsNullOrEmpty(normalized))
+        {
+            ctx.Request.Scheme = normalized;
+            ctx.Request.IsHttps = string.Equals(normalized, "https", StringComparison.OrdinalIgnoreCase);
+        }
+    }
+
+    return next();
+});
 app.UseCors(CorsPolicyName);
 
 app.Use(async (ctx, next) =>
@@ -384,11 +406,21 @@ static string AlterUpstreamSwaggerJson(HttpContext context, string swaggerJson)
     var swagger = Newtonsoft.Json.JsonConvert.DeserializeObject<Newtonsoft.Json.Linq.JObject>(swaggerJson);
     if (swagger != null)
     {
+        var protoHeader = context.Request.Headers["CloudFront-Forwarded-Proto"].FirstOrDefault()
+                          ?? context.Request.Headers["X-Forwarded-Proto"].FirstOrDefault();
+        var scheme = protoHeader?.Split(',', StringSplitOptions.RemoveEmptyEntries)
+                        .FirstOrDefault()
+                        ?.Trim();
+        if (string.IsNullOrEmpty(scheme))
+        {
+            scheme = context.Request.Scheme;
+        }
+
         var servers = new Newtonsoft.Json.Linq.JArray
         {
             new Newtonsoft.Json.Linq.JObject
             {
-                ["url"] = $"{context.Request.Scheme}://{context.Request.Host}"
+                ["url"] = $"{scheme}://{context.Request.Host}"
             }
         };
         swagger["servers"] = servers;
