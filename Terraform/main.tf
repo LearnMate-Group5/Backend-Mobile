@@ -25,6 +25,10 @@ module "alb" {
   vpc_id            = module.vpc.vpc_id
   public_subnet_ids = module.vpc.public_subnet_ids
 
+  # SSL/TLS Certificate Configuration
+  certificate_arn       = var.certificate_arn
+  enable_https_redirect = var.enable_https_redirect
+
   target_groups_definition = [
     {
       # API Gateway Target Group
