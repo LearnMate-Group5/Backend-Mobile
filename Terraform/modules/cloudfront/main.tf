@@ -111,7 +111,6 @@ resource "aws_cloudfront_origin_request_policy" "include_cloudfront_headers" {
     headers {
       items = [
         "CloudFront-Forwarded-Proto",
-        "Host",
         "CloudFront-Viewer-Country",
         "CloudFront-Is-Mobile-Viewer",
         "CloudFront-Is-Tablet-Viewer",
