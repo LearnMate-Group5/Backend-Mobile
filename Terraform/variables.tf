@@ -81,6 +81,19 @@ variable "enable_https_redirect" {
   default     = true
 }
 
+# CloudFront Configuration
+variable "use_cloudfront_https" {
+  description = "Whether to use CloudFront to provide free HTTPS for ALB. When true, CloudFront will be created in front of ALB."
+  type        = bool
+  default     = true
+}
+
+variable "cloudfront_enable_caching" {
+  description = "Whether to enable CloudFront caching. Set to false to pass all requests directly to ALB without caching."
+  type        = bool
+  default     = false
+}
+
 # Service Definitions Variable
 variable "services" {
   description = "Configuration for each microservice"
