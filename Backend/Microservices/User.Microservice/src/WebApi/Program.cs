@@ -1,6 +1,7 @@
 using Application;
 using Infrastructure;
 using Infrastructure.Context;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.Extensions.DependencyInjection;
@@ -54,6 +55,17 @@ if (allowedCorsOrigins.Length == 0)
 
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
+
+// Configure forwarded headers for CloudFront/ALB support
+builder.Services.Configure<ForwardedHeadersOptions>(options =>
+{
+    options.ForwardedHeaders = ForwardedHeaders.XForwardedFor |
+                               ForwardedHeaders.XForwardedProto |
+                               ForwardedHeaders.XForwardedHost;
+    options.KnownNetworks.Clear();
+    options.KnownProxies.Clear();
+});
+
 builder.Services.AddCors(options =>
 {
     options.AddPolicy(CorsPolicyName, policy =>
@@ -215,6 +227,9 @@ else
 // Health check endpoints
 app.MapGet("/health", () => new { status = "ok" });
 app.MapGet("/api/health", () => new { status = "ok" });
+
+// Use forwarded headers (must be before UseHttpsRedirection and other middleware)
+app.UseForwardedHeaders();
 
 // Always enable Swagger in microservices; gateway controls external exposure
 app.UseSwagger();
