@@ -107,47 +107,41 @@ using (var scope = app.Services.CreateScope())
 app.MapGet("/health", () => new { status = "ok" });
 app.MapGet("/api/health", () => new { status = "ok" });
 
+// Debug endpoint to check headers
+app.MapGet("/debug/headers", (HttpContext context) =>
+{
+    var headers = context.Request.Headers
+        .ToDictionary(h => h.Key, h => h.Value.ToString());
+    return Results.Ok(new
+    {
+        headers,
+        scheme = context.Request.Scheme,
+        host = context.Request.Host.ToString(),
+        path = context.Request.Path.ToString()
+    });
+});
+
+// ---------- middleware order matters ----------
+
+// 1) Forwarded headers FIRST
 app.UseForwardedHeaders();
 
-app.UseSwagger(c =>
+// 2) Respect CloudFront viewer scheme (HTTPS at the edge)
+app.Use((ctx, next) =>
 {
-    c.PreSerializeFilters.Add((swagger, httpReq) =>
+    var cfProto = ctx.Request.Headers["CloudFront-Forwarded-Proto"].ToString();
+    if (string.Equals(cfProto, "https", StringComparison.OrdinalIgnoreCase))
     {
-        var useHttps = Environment.GetEnvironmentVariable("USE_HTTPS")?.ToLowerInvariant() == "true";
-        
-        if (useHttps)
-        {
-            var host = httpReq.Headers["X-Forwarded-Host"].FirstOrDefault() 
-                       ?? httpReq.Headers["Host"].FirstOrDefault();
-            
-            if (!string.IsNullOrEmpty(host))
-            {
-                swagger.Servers = new List<OpenApiServer>
-                {
-                    new OpenApiServer { Url = $"https://{host}" }
-                };
-            }
-        }
-    });
+        ctx.Request.Scheme = "https";
+        ctx.Request.IsHttps = true;
+    }
+    return next();
 });
 
-app.UseSwaggerUI(c =>
-{
-    c.SwaggerEndpoint("/swagger/v1/swagger.json", "Book Service API V1");
-    c.RoutePrefix = "swagger";
-});
-
-if (app.Environment.IsDevelopment())
-{
-    app.MapGet("/", context =>
-    {
-        context.Response.Redirect("/swagger");
-        return Task.CompletedTask;
-    });
-}
-
+// 3) Logging
 app.UseSerilogRequestLogging();
 
+// 4) Only redirect to HTTPS if scheme is already corrected by step #2
 if (!app.Environment.IsDevelopment())
 {
     if (HasHttpsEndpointConfigured())
@@ -160,10 +154,49 @@ if (!app.Environment.IsDevelopment())
     }
 }
 
-app.UseMiddleware<JwtMiddleware>();
+// 5) Swagger (server URL patched via PreSerialize)
+app.UseSwagger(c =>
+{
+    c.PreSerializeFilters.Add((swagger, httpReq) =>
+    {
+        var proto = httpReq.Headers["CloudFront-Forwarded-Proto"].FirstOrDefault()
+                    ?? httpReq.Headers["X-Forwarded-Proto"].FirstOrDefault()
+                    ?? httpReq.Scheme;
 
+        var host = httpReq.Headers["Host"].FirstOrDefault()
+                   ?? httpReq.Host.Value;
+
+        if (!string.IsNullOrEmpty(proto) && !string.IsNullOrEmpty(host))
+        {
+            swagger.Servers = new List<OpenApiServer>
+            {
+                new OpenApiServer { Url = $"{proto}://{host}" }
+            };
+        }
+    });
+});
+
+app.UseSwaggerUI(c =>
+{
+    // Relative path is safer behind proxies/CDNs
+    c.SwaggerEndpoint("./v1/swagger.json", "Book Service API V1");
+    c.RoutePrefix = "swagger";
+});
+
+if (app.Environment.IsDevelopment())
+{
+    app.MapGet("/", context =>
+    {
+        context.Response.Redirect("/swagger");
+        return Task.CompletedTask;
+    });
+}
+
+// 6) Auth pipeline
+app.UseMiddleware<JwtMiddleware>();
 app.UseAuthorization();
 
+// ---------- endpoints ----------
 app.MapControllers();
 
 logger.LogInformation(
