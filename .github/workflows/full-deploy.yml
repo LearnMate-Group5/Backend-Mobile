@@ -178,6 +178,8 @@ jobs:
     if: always() && needs.bootstrap-backend.result == 'success'
     outputs:
       alb_dns_name: ${{ steps.terraform-outputs.outputs.alb_dns_name }}
+      cloudfront_https_url: ${{ steps.terraform-outputs.outputs.cloudfront_https_url }}
+      primary_endpoint: ${{ steps.terraform-outputs.outputs.primary_endpoint }}
     environment:
       name: ${{ inputs.environment }}
     env:
@@ -341,8 +343,16 @@ jobs:
         working-directory: Terraform
         run: |
           ALB_DNS=$(terraform output -raw alb_dns_name 2>/dev/null || echo "")
+          CLOUDFRONT_URL=$(terraform output -raw cloudfront_https_url 2>/dev/null || echo "")
+          PRIMARY_ENDPOINT=$(terraform output -raw primary_endpoint 2>/dev/null || echo "")
+          
           echo "alb_dns_name=$ALB_DNS" >> $GITHUB_OUTPUT
+          echo "cloudfront_https_url=$CLOUDFRONT_URL" >> $GITHUB_OUTPUT
+          echo "primary_endpoint=$PRIMARY_ENDPOINT" >> $GITHUB_OUTPUT
+          
           echo "Extracted ALB DNS: $ALB_DNS"
+          echo "Extracted CloudFront URL: $CLOUDFRONT_URL"
+          echo "Extracted Primary Endpoint: $PRIMARY_ENDPOINT"
 
       - name: Output Terraform results
         if: ${{ inputs.terraform_action == 'apply' }}
@@ -351,6 +361,8 @@ jobs:
           DISCOVERED_SERVICES: ${{ needs.discover-services.outputs.services }}
           SECRETS_JSON: ${{ toJson(secrets) }}
           ALB_DNS: ${{ steps.terraform-outputs.outputs.alb_dns_name }}
+          CLOUDFRONT_URL: ${{ steps.terraform-outputs.outputs.cloudfront_https_url }}
+          PRIMARY_ENDPOINT: ${{ steps.terraform-outputs.outputs.primary_endpoint }}
         run: |
           echo "## 🚀 Terraform Deployment Summary" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
@@ -360,15 +372,12 @@ jobs:
           echo "**Project**: ${{ env.PROJECT_NAME }}" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
 
-          # Display ALB DNS name if available
-          if [ -n "$ALB_DNS" ]; then
-            echo "### 🌐 Application Load Balancer" >> $GITHUB_STEP_SUMMARY
+          # Display primary endpoint (CloudFront HTTPS or ALB HTTP)
+          if [ -n "$PRIMARY_ENDPOINT" ]; then
+            echo "### 🌐 Application Endpoint" >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
-            echo "**URL**: \`http://$ALB_DNS\`" >> $GITHUB_STEP_SUMMARY
-            echo "" >> $GITHUB_STEP_SUMMARY
-            echo "Access your application at:" >> $GITHUB_STEP_SUMMARY
             echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
-            echo "http://$ALB_DNS" >> $GITHUB_STEP_SUMMARY
+            echo "$PRIMARY_ENDPOINT" >> $GITHUB_STEP_SUMMARY
             echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
           fi
@@ -411,6 +420,8 @@ jobs:
           DISCOVERED_SERVICES: ${{ needs.discover-services.outputs.services }}
           SECRETS_JSON: ${{ toJson(secrets) }}
           ALB_DNS: ${{ needs.terraform-deploy.outputs.alb_dns_name }}
+          CLOUDFRONT_URL: ${{ needs.terraform-deploy.outputs.cloudfront_https_url }}
+          PRIMARY_ENDPOINT: ${{ needs.terraform-deploy.outputs.primary_endpoint }}
         run: |
           echo "## 🎉 Full Infrastructure Deployment Complete" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
@@ -418,14 +429,12 @@ jobs:
           echo "**Terraform Action**: ${{ inputs.terraform_action }}" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
 
-          # Display ALB URL prominently if available
-          if [ -n "$ALB_DNS" ] && [ "${{ inputs.terraform_action }}" == "apply" ]; then
+          # Display primary endpoint (CloudFront HTTPS or ALB HTTP)
+          if [ -n "$PRIMARY_ENDPOINT" ] && [ "${{ inputs.terraform_action }}" == "apply" ]; then
             echo "### 🌐 Your Application is Live!" >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
-            echo "**Application URL**: http://$ALB_DNS" >> $GITHUB_STEP_SUMMARY
-            echo "" >> $GITHUB_STEP_SUMMARY
             echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
-            echo "http://$ALB_DNS" >> $GITHUB_STEP_SUMMARY
+            echo "$PRIMARY_ENDPOINT" >> $GITHUB_STEP_SUMMARY
             echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
           fi
