@@ -1,0 +1,94 @@
+locals {
+  # Origin ID for the ALB
+  alb_origin_id = "${var.project_name}-alb-origin"
+  
+  # Cache behavior settings
+  # When caching is disabled, we still need to set TTL values to 0
+  # and forward all headers to prevent any caching
+  cache_config = var.enable_caching ? {
+    min_ttl     = var.min_ttl
+    default_ttl = var.default_ttl
+    max_ttl     = var.max_ttl
+    headers     = var.forward_headers
+  } : {
+    min_ttl     = 0
+    default_ttl = 0
+    max_ttl     = 0
+    headers     = ["*"] # Forward all headers disables caching
+  }
+}
+
+resource "aws_cloudfront_distribution" "alb_distribution" {
+  enabled             = true
+  is_ipv6_enabled     = true
+  comment             = "CloudFront distribution for ${var.project_name} ALB with HTTPS"
+  price_class         = var.price_class
+  http_version        = "http2and3"
+  wait_for_deployment = true
+
+  # Origin configuration - pointing to ALB
+  origin {
+    domain_name = var.alb_dns_name
+    origin_id   = local.alb_origin_id
+
+    custom_origin_config {
+      http_port              = 80
+      https_port             = 443
+      origin_protocol_policy = "http-only" # ALB doesn't have HTTPS yet, so use HTTP
+      origin_ssl_protocols   = ["TLSv1.2"]
+      origin_read_timeout    = 60
+      origin_keepalive_timeout = 5
+    }
+
+    # Custom headers to identify CloudFront requests at ALB (optional)
+    custom_header {
+      name  = "X-Custom-Origin"
+      value = var.project_name
+    }
+  }
+
+  # Default cache behavior
+  default_cache_behavior {
+    allowed_methods        = var.allowed_methods
+    cached_methods         = var.cached_methods
+    target_origin_id       = local.alb_origin_id
+    compress               = var.compress
+    viewer_protocol_policy = var.viewer_protocol_policy
+
+    # Cache settings
+    min_ttl     = local.cache_config.min_ttl
+    default_ttl = local.cache_config.default_ttl
+    max_ttl     = local.cache_config.max_ttl
+
+    # Forwarding configuration
+    forwarded_values {
+      query_string = var.forward_query_string
+      headers      = local.cache_config.headers
+
+      cookies {
+        forward = var.forward_cookies
+      }
+    }
+  }
+
+  # Restrictions (no geographic restrictions by default)
+  restrictions {
+    geo_restriction {
+      restriction_type = "none"
+    }
+  }
+
+  # SSL/TLS certificate configuration
+  # CloudFront provides a default *.cloudfront.net certificate for free
+  viewer_certificate {
+    cloudfront_default_certificate = true
+    minimum_protocol_version       = "TLSv1.2_2021"
+  }
+
+  tags = {
+    Name        = "${var.project_name}-cloudfront-distribution"
+    Project     = var.project_name
+    Environment = "production"
+    Purpose     = "HTTPS termination for ALB"
+  }
+}
