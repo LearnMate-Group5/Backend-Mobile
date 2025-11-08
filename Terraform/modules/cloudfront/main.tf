@@ -16,6 +16,8 @@ resource "aws_cloudfront_distribution" "alb_distribution" {
   http_version        = "http2and3"
   wait_for_deployment = true
 
+  depends_on = [data.aws_cloudfront_cache_policy.caching_disabled]
+
   # Origin configuration - pointing to ALB
   origin {
     domain_name = var.alb_dns_name
