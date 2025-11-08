@@ -6,6 +6,14 @@ locals {
   n8n_service_connect_host     = var.services["n8n"].ecs_service_connect_dns_name
   n8n_service_port             = var.services.n8n.ecs_container_port_mappings[0].container_port
   ai_webhook_endpoint_connect  = "http://${local.n8n_service_connect_host}:${local.n8n_service_port}/webhook/upload-and-translate"
+  
+  # Public endpoint - use CloudFront HTTPS if enabled, otherwise ALB HTTP
+  public_endpoint = var.use_cloudfront_https ? "https://${module.cloudfront[0].cloudfront_domain_name}" : "http://${module.alb.alb_dns_name}"
+  
+  # Proxy depth for n8n - CloudFront adds one more hop (CloudFront -> ALB -> Container)
+  # Without CloudFront: 1 (ALB -> Container)
+  # With CloudFront: 2 (CloudFront -> ALB -> Container)
+  n8n_proxy_depth = var.use_cloudfront_https ? 2 : 1
 }
 
 # VPC Module
@@ -516,19 +524,20 @@ module "ecs_server3" {
             [
               for env_var in var.services["n8n"].ecs_environment_variables :
               env_var
+              if env_var.name != "N8N_EDITOR_BASE_URL" && env_var.name != "WEBHOOK_URL" && env_var.name != "VUE_APP_URL_BASE_API"
             ],
             [
               {
                 name  = "N8N_EDITOR_BASE_URL"
-                value = "http://${module.alb.alb_dns_name}/n8n/"
+                value = "${local.public_endpoint}/n8n/"
               },
               {
                 name  = "WEBHOOK_URL"
-                value = "http://${module.alb.alb_dns_name}/n8n/"
+                value = "${local.public_endpoint}/n8n/"
               },
               {
                 name  = "VUE_APP_URL_BASE_API"
-                value = "http://${module.alb.alb_dns_name}/n8n/"
+                value = "${local.public_endpoint}/n8n/"
               }
             ]
           )
@@ -574,6 +583,11 @@ server {
     listen 8088;
     server_name _;
     client_max_body_size 50m;
+
+    # Set real IP from CloudFront/ALB (support ${local.n8n_proxy_depth} proxy hops)
+    set_real_ip_from 10.0.0.0/8;
+    real_ip_header X-Forwarded-For;
+    real_ip_recursive on;
 
     location = /n8n {
         return 301 /n8n/;
@@ -795,11 +809,11 @@ module "ecs_server2" {
             [
               {
                 name  = "ZaloPay__CallbackUrl"
-                value = "http://${module.alb.alb_dns_name}/api/payment/zalopay/ipn"
+                value = "${local.public_endpoint}/api/payment/zalopay/ipn"
               },
               {
                 name  = "MoMo__IpnUrl"
-                value = "http://${module.alb.alb_dns_name}/api/payment/momo/ipn"
+                value = "${local.public_endpoint}/api/payment/momo/ipn"
               }
             ]
           )
