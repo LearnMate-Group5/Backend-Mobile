@@ -621,6 +621,38 @@ EOT
   depends_on = [module.ec2]
 }
 
+# CloudFront Module (Optional - for free HTTPS)
+module "cloudfront" {
+  count  = var.use_cloudfront_https ? 1 : 0
+  source = "./modules/cloudfront"
+
+  project_name    = var.project_name
+  alb_dns_name    = module.alb.alb_dns_name
+  alb_id          = module.alb.alb_arn
+  enable_caching  = var.cloudfront_enable_caching
+
+  # CloudFront settings optimized for API/microservices
+  viewer_protocol_policy = "redirect-to-https"  # Redirect HTTP to HTTPS
+  price_class            = "PriceClass_100"     # Use only North America and Europe (cheapest)
+  
+  # Caching configuration
+  min_ttl     = var.cloudfront_enable_caching ? 0 : 0
+  default_ttl = var.cloudfront_enable_caching ? 3600 : 0
+  max_ttl     = var.cloudfront_enable_caching ? 86400 : 0
+  
+  # Forward all cookies, headers, and query strings to support API functionality
+  forward_cookies       = "all"
+  forward_query_string  = true
+  forward_headers       = var.cloudfront_enable_caching ? ["Host", "Authorization", "CloudFront-*"] : ["*"]
+  
+  # HTTP methods for API support
+  allowed_methods = ["DELETE", "GET", "HEAD", "OPTIONS", "PATCH", "POST", "PUT"]
+  cached_methods  = ["GET", "HEAD", "OPTIONS"]
+  compress        = true
+
+  depends_on = [module.alb]
+}
+
 # ECS Module - Server-2 (User + AI + Payment + API Gateway)
 # Deploys AFTER server-1 (RabbitMQ/Redis/Book/Subscription) and server-3 (n8n) reach steady state
 # This ensures all required dependencies are available before microservices start
