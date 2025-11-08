@@ -5,6 +5,7 @@ using System.Text.Json.Serialization;
 using Application;
 using Infrastructure;
 using Infrastructure.Context;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
@@ -29,6 +30,16 @@ tempLogger.LogInformation("=== End Debug Info ===");
 builder.Services.AddControllers()
     .AddJsonOptions(options => options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter()));
 builder.Services.AddEndpointsApiExplorer();
+
+// Configure forwarded headers for CloudFront/ALB support
+builder.Services.Configure<ForwardedHeadersOptions>(options =>
+{
+    options.ForwardedHeaders = ForwardedHeaders.XForwardedFor |
+                               ForwardedHeaders.XForwardedProto |
+                               ForwardedHeaders.XForwardedHost;
+    options.KnownNetworks.Clear();
+    options.KnownProxies.Clear();
+});
 
 // Configure database
 builder.Services.ConfigureOptions<DatabaseConfigSetup>();
@@ -102,6 +113,9 @@ var app = builder.Build();
 // Health check endpoints
 app.MapGet("/health", () => new { status = "ok" });
 app.MapGet("/api/health", () => new { status = "ok" });
+
+// Use forwarded headers (must be before other middleware)
+app.UseForwardedHeaders();
 
 // Add JWT middleware
 app.UseMiddleware<JwtMiddleware>();
