@@ -49,6 +49,7 @@ services = {
       { name = "DATABASE_PASSWORD", value = "AVNS_vsIotPLRrxJUhcJlM0m" },
       { name = "DATABASE_SSLMODE", value = "Require" },
       { name = "ASPNETCORE_URLS", value = "http://+:5006" },
+      { name = "USE_HTTPS", value = "true" },
       { name = "RABBITMQ_HOST", value = "rabbitmq" },
       { name = "RABBITMQ_PORT", value = "5672" },
       { name = "RABBITMQ_USERNAME", value = "rabbitmq" },
