@@ -1,21 +1,11 @@
 locals {
   # Origin ID for the ALB
   alb_origin_id = "${var.project_name}-alb-origin"
-  
-  # Cache behavior settings
-  # When caching is disabled, we still need to set TTL values to 0
-  # and forward all headers to prevent any caching
-  cache_config = var.enable_caching ? {
-    min_ttl     = var.min_ttl
-    default_ttl = var.default_ttl
-    max_ttl     = var.max_ttl
-    headers     = var.forward_headers
-  } : {
-    min_ttl     = 0
-    default_ttl = 0
-    max_ttl     = 0
-    headers     = ["*"] # Forward all headers disables caching
-  }
+}
+
+# Look up AWS managed CachingDisabled policy
+data "aws_cloudfront_cache_policy" "caching_disabled" {
+  name = "Managed-CachingDisabled"
 }
 
 resource "aws_cloudfront_distribution" "alb_distribution" {
@@ -55,24 +45,9 @@ resource "aws_cloudfront_distribution" "alb_distribution" {
     compress               = var.compress
     viewer_protocol_policy = var.viewer_protocol_policy
 
-    # Use managed origin request policy that includes CloudFront headers
-    # This forwards CloudFront-Forwarded-Proto header to the origin
+    # Attach BOTH modern policies
+    cache_policy_id          = data.aws_cloudfront_cache_policy.caching_disabled.id
     origin_request_policy_id = aws_cloudfront_origin_request_policy.include_cloudfront_headers.id
-
-    # Cache settings
-    min_ttl     = local.cache_config.min_ttl
-    default_ttl = local.cache_config.default_ttl
-    max_ttl     = local.cache_config.max_ttl
-
-    # Forwarding configuration
-    forwarded_values {
-      query_string = var.forward_query_string
-      headers      = local.cache_config.headers
-
-      cookies {
-        forward = var.forward_cookies
-      }
-    }
   }
 
   # Restrictions (no geographic restrictions by default)
