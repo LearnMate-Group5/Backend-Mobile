@@ -55,6 +55,10 @@ resource "aws_cloudfront_distribution" "alb_distribution" {
     compress               = var.compress
     viewer_protocol_policy = var.viewer_protocol_policy
 
+    # Use managed origin request policy that includes CloudFront headers
+    # This forwards CloudFront-Forwarded-Proto header to the origin
+    origin_request_policy_id = aws_cloudfront_origin_request_policy.include_cloudfront_headers.id
+
     # Cache settings
     min_ttl     = local.cache_config.min_ttl
     default_ttl = local.cache_config.default_ttl
@@ -90,5 +94,33 @@ resource "aws_cloudfront_distribution" "alb_distribution" {
     Project     = var.project_name
     Environment = "production"
     Purpose     = "HTTPS termination for ALB"
+  }
+}
+
+# Create Origin Request Policy to include CloudFront headers
+resource "aws_cloudfront_origin_request_policy" "include_cloudfront_headers" {
+  name    = "${var.project_name}-cloudfront-headers-policy"
+  comment = "Policy to forward CloudFront-Forwarded-Proto and Host header to origin"
+
+  cookies_config {
+    cookie_behavior = "all"
+  }
+
+  headers_config {
+    header_behavior = "allViewerAndWhitelistCloudFront"
+    headers {
+      items = [
+        "CloudFront-Forwarded-Proto",
+        "Host",
+        "CloudFront-Viewer-Country",
+        "CloudFront-Is-Mobile-Viewer",
+        "CloudFront-Is-Tablet-Viewer",
+        "CloudFront-Is-Desktop-Viewer"
+      ]
+    }
+  }
+
+  query_strings_config {
+    query_string_behavior = "all"
   }
 }
