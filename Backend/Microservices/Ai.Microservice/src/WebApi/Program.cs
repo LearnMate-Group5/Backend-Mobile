@@ -78,7 +78,28 @@ app.MapGet("/api/health", () => new { status = "ok" });
 // Use forwarded headers (must be before other middleware)
 app.UseForwardedHeaders();
 
-app.UseSwagger();
+app.UseSwagger(c =>
+{
+    c.PreSerializeFilters.Add((swagger, httpReq) =>
+    {
+        var useHttps = Environment.GetEnvironmentVariable("USE_HTTPS")?.ToLowerInvariant() == "true";
+        
+        if (useHttps)
+        {
+            var host = httpReq.Headers["X-Forwarded-Host"].FirstOrDefault() 
+                       ?? httpReq.Headers["Host"].FirstOrDefault();
+            
+            if (!string.IsNullOrEmpty(host))
+            {
+                swagger.Servers = new List<OpenApiServer>
+                {
+                    new OpenApiServer { Url = $"https://{host}" }
+                };
+            }
+        }
+    });
+});
+
 app.UseSwaggerUI(c =>
 {
     c.SwaggerEndpoint("/swagger/v1/swagger.json", "AI Webhook API V1");
