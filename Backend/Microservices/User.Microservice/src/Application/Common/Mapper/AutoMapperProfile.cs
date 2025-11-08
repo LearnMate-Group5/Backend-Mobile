@@ -28,7 +28,16 @@ namespace Application.Common.Mapper
 
             CreateMap<GetUserResponse, User>();
             CreateMap<User, GetUserResponse>()
-                .ForMember(dest => dest.Status, opt => opt.MapFrom(src => UserStatus.FromBool(src.IsActive)));
+                .ForMember(dest => dest.Status, opt => opt.MapFrom(src => UserStatus.FromBool(src.IsActive)))
+                .ForMember(dest => dest.Role,
+                    opt => opt.MapFrom(src =>
+                        src.UserRoles != null
+                            ? src.UserRoles
+                                .Select(ur => ur.Role != null ? ur.Role.RoleName : null)
+                                .Where(roleName => !string.IsNullOrWhiteSpace(roleName))
+                                .Select(roleName => roleName.Trim())
+                                .FirstOrDefault()
+                            : null));
         }
         
     }

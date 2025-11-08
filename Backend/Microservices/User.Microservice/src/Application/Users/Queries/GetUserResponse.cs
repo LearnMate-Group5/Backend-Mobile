@@ -17,7 +17,8 @@ namespace Application.Users.Queries
         bool? IsPremium,
         string? ProviderName,
         DateTime? CreatedAt,
-        DateTime? UpdatedAt
+        DateTime? UpdatedAt,
+        string? Role
     );
 
     public sealed record GetUsersPageResponse(

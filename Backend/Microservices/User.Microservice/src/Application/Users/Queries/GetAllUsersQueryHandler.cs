@@ -28,30 +28,45 @@ namespace Application.Users.Queries
             var pageNumber = request.PageNumber <= 0 ? 1 : request.PageNumber;
             var pageSize = request.PageSize <= 0 ? 20 : Math.Min(request.PageSize, MaxPageSize);
 
-            var query = _userRepository.GetAll();
+            var query = _userRepository
+                .GetAll()
+                .Include(u => u.UserRoles)
+                .ThenInclude(ur => ur.Role);
 
             var totalCount = await query.CountAsync(cancellationToken);
 
-            var users = await query
+            var usersPage = await query
                 .OrderByDescending(u => u.CreatedAt ?? DateTime.UnixEpoch)
                 .Skip((pageNumber - 1) * pageSize)
                 .Take(pageSize)
-                .Select(u => new GetUserResponse(
-                    u.UserId,
-                    u.Name,
-                    u.Email,
-                    u.DateOfBirth,
-                    u.Gender,
-                    u.PhoneNumber,
-                    u.IsActive ? UserStatus.Active : UserStatus.Inactive,
-                    u.IsVerified,
-                    u.IsActive,
-                    u.AvatarUrl,
-                    u.IsPremium,
-                    u.ProviderName,
-                    u.CreatedAt,
-                    u.UpdatedAt))
                 .ToListAsync(cancellationToken);
+
+            var users = usersPage
+                .Select(u =>
+                {
+                    var role = u.UserRoles?
+                        .Select(ur => ur.Role?.RoleName)
+                        .FirstOrDefault(roleName => !string.IsNullOrWhiteSpace(roleName))
+                        ?.Trim();
+
+                    return new GetUserResponse(
+                        u.UserId,
+                        u.Name,
+                        u.Email,
+                        u.DateOfBirth,
+                        u.Gender,
+                        u.PhoneNumber,
+                        u.IsActive ? UserStatus.Active : UserStatus.Inactive,
+                        u.IsVerified,
+                        u.IsActive,
+                        u.AvatarUrl,
+                        u.IsPremium,
+                        u.ProviderName,
+                        u.CreatedAt,
+                        u.UpdatedAt,
+                        role);
+                })
+                .ToList();
 
             var result = new GetUsersPageResponse(users, pageNumber, pageSize, totalCount);
 
