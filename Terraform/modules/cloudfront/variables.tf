@@ -31,6 +31,12 @@ variable "viewer_protocol_policy" {
   default     = "redirect-to-https"
 }
 
+variable "viewer_min_protocol_version" {
+  description = "Minimum TLS version CloudFront accepts from viewers (e.g., TLSv1, TLSv1.1, TLSv1.2_2018, TLSv1.2_2021)."
+  type        = string
+  default     = "TLSv1.2_2018"
+}
+
 variable "min_ttl" {
   description = "Minimum amount of time objects stay in CloudFront cache (seconds). 0 = no caching"
   type        = number
