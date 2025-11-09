@@ -59,7 +59,8 @@ services = {
       { name = "Jwt__SecretKey", value = "YourSuperSecretKeyThatIsAtLeast32CharactersLong!@#$%^&*()" },
       { name = "Jwt__Issuer", value = "UserMicroservice" },
       { name = "Jwt__Audience", value = "MicroservicesApp" },
-      { name = "Jwt__ExpirationMinutes", value = "60" }
+      { name = "Jwt__ExpirationMinutes", value = "60" },
+      { name = "Cors__AllowedOrigins__0", value = "https://learn-mate-web.vercel.app" }
     ]
 
 
