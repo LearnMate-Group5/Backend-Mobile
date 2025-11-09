@@ -27,7 +27,7 @@ resource "aws_cloudfront_origin_request_policy" "include_cloudfront_headers" {
 
 resource "aws_cloudfront_distribution" "alb_distribution" {
   enabled             = true
-  is_ipv6_enabled     = true
+  is_ipv6_enabled     = false
   comment             = "CloudFront distribution for ${var.project_name} ALB with HTTPS"
   price_class         = var.price_class
   http_version        = "http2and3"
