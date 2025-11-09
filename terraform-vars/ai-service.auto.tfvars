@@ -50,7 +50,8 @@ services = {
       { name = "DATABASE_NAME", value = "aidb" },
       { name = "DATABASE_USERNAME", value = "avnadmin" },
       { name = "DATABASE_PASSWORD", value = "AVNS_vsIotPLRrxJUhcJlM0m" },
-      { name = "DATABASE_SSLMODE", value = "Require" }
+      { name = "DATABASE_SSLMODE", value = "Require" },
+      { name = "Cors__AllowedOrigins__0", value = "https://learn-mate-web.vercel.app" }
     ]
 
     ecs_container_health_check = {
