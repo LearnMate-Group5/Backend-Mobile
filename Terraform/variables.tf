@@ -94,6 +94,30 @@ variable "cloudfront_enable_caching" {
   default     = false
 }
 
+variable "cloudfront_enable_logging" {
+  description = "Enable CloudFront access logging to S3 for debugging (e.g., MoMo IPN issues)"
+  type        = bool
+  default     = false
+}
+
+variable "cloudfront_logging_bucket" {
+  description = "S3 bucket name for CloudFront access logs (without .s3.amazonaws.com suffix). Required if cloudfront_enable_logging = true"
+  type        = string
+  default     = ""
+}
+
+variable "cloudfront_logging_prefix" {
+  description = "Prefix for CloudFront log files in S3 bucket"
+  type        = string
+  default     = "cloudfront-logs/"
+}
+
+variable "cloudfront_logging_include_cookies" {
+  description = "Include cookies in CloudFront access logs"
+  type        = bool
+  default     = false
+}
+
 # Service Definitions Variable
 variable "services" {
   description = "Configuration for each microservice"
