@@ -26,6 +26,13 @@ enable_service_connect = true
 use_cloudfront_https      = true   # Enable CloudFront for free HTTPS
 cloudfront_enable_caching = false  # Disable caching (recommended for APIs)
 
+# CloudFront Access Logging (for debugging - e.g., MoMo IPN not reaching backend)
+# Set enable_logging = true and provide your S3 bucket name from bootstrap
+cloudfront_enable_logging         = true                    # Enable logging to debug MoMo IPN issues
+cloudfront_logging_bucket         = "learnmate-us-east-1-terraform-state"   # Replace with your bootstrap S3 bucket name
+cloudfront_logging_prefix         = "cloudfront-logs/"      # Prefix for log files
+cloudfront_logging_include_cookies = false                   # Set to true to include cookies in logs
+
 # OPTION 2: ALB with ACM Certificate (Requires Custom Domain)
 # -----------------------------------------------------------------------
 # To enable HTTPS directly on ALB, you need:
