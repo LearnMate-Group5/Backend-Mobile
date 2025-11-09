@@ -32,9 +32,9 @@ variable "viewer_protocol_policy" {
 }
 
 variable "viewer_min_protocol_version" {
-  description = "Minimum TLS version CloudFront accepts from viewers (e.g., TLSv1, TLSv1.1, TLSv1.2_2018, TLSv1.2_2021)."
+  description = "Minimum TLS version CloudFront accepts from viewers. TLSv1.2_2021 required for MoMo IPN (HTTPS with TLS 1.2+)"
   type        = string
-  default     = "TLSv1_2016"
+  default     = "TLSv1.2_2021"
 }
 
 variable "min_ttl" {
