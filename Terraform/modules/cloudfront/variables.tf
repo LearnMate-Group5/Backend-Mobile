@@ -34,7 +34,7 @@ variable "viewer_protocol_policy" {
 variable "viewer_min_protocol_version" {
   description = "Minimum TLS version CloudFront accepts from viewers (e.g., TLSv1, TLSv1.1, TLSv1.2_2018, TLSv1.2_2021)."
   type        = string
-  default     = "TLSv1.2_2018"
+  default     = "TLSv1_2016"
 }
 
 variable "min_ttl" {
