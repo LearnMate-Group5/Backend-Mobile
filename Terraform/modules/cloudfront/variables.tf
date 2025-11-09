@@ -90,3 +90,27 @@ variable "forward_headers" {
   type        = list(string)
   default     = ["*"] # Forward all headers to support API functionality
 }
+
+variable "enable_logging" {
+  description = "Enable CloudFront access logging to S3 for debugging and monitoring"
+  type        = bool
+  default     = false
+}
+
+variable "logging_bucket" {
+  description = "S3 bucket name for CloudFront access logs (without .s3.amazonaws.com suffix). Required if enable_logging = true"
+  type        = string
+  default     = ""
+}
+
+variable "logging_prefix" {
+  description = "Prefix for CloudFront log files in S3 bucket"
+  type        = string
+  default     = "cloudfront-logs/"
+}
+
+variable "logging_include_cookies" {
+  description = "Include cookies in CloudFront access logs"
+  type        = bool
+  default     = false
+}
