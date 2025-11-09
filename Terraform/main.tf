@@ -664,6 +664,12 @@ module "cloudfront" {
   cached_methods  = ["GET", "HEAD", "OPTIONS"]
   compress        = true
 
+  # CloudFront access logging (for debugging MoMo IPN and other requests)
+  enable_logging         = var.cloudfront_enable_logging
+  logging_bucket         = var.cloudfront_logging_bucket
+  logging_prefix         = var.cloudfront_logging_prefix
+  logging_include_cookies = var.cloudfront_logging_include_cookies
+
   depends_on = [module.alb]
 }
 
@@ -881,7 +887,7 @@ module "ecs_server2" {
           }
           depends_on = ["user-microservice", "ai-microservice", "payment-microservice"]
         }
-      ] 
+      ]
 
       target_groups = [
         {
