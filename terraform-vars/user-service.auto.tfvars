@@ -68,7 +68,7 @@ services = {
   { name = "SMTP_FROM_NAME", value = "Learn Mate" },
   { name = "SMTP_FROM_EMAIL", value = "mainee5704@gmail.com" },
   { name = "AUTO_APPLY_MIGRATIONS", value = "true" },
-  { name = "Cors__AllowedOrigins__0", value = "http://localhost:2406" },
+  { name = "Cors__AllowedOrigins__0", value = "https://learn-mate-web.vercel.app" },
   { name = "ConnectionStrings__DefaultConnection", value = "Host=pg-2-database25812.g.aivencloud.com;Port=19217;Database=userdb;Username=avnadmin;Password=AVNS_vsIotPLRrxJUhcJlM0m;Ssl Mode=Require;" }
     ]
 
