@@ -68,7 +68,8 @@ services = {
       { name = "MoMo__PartnerCode", value = "MOMONPMB20210629" },
       { name = "MoMo__AccessKey", value = "Q2XhhSdgpKUlQ4Ky" },
       { name = "MoMo__SecretKey", value = "k6B53GQKSjktZGJBK2MyrDa7w9S6RyCf" },
-      { name = "MoMo__BaseUrl", value = "https://test-payment.momo.vn" }
+      { name = "MoMo__BaseUrl", value = "https://test-payment.momo.vn" },
+      { name = "Cors__AllowedOrigins__0", value = "https://learn-mate-web.vercel.app" }
     ]
 
     ecs_container_health_check = {
