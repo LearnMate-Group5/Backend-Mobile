@@ -51,7 +51,8 @@ services = {
       { name = "DATABASE_USERNAME", value = "avnadmin" },
       { name = "DATABASE_PASSWORD", value = "AVNS_vsIotPLRrxJUhcJlM0m" },
       { name = "DATABASE_SSLMODE", value = "Require" },
-      { name = "Cors__AllowedOrigins__0", value = "https://learn-mate-web.vercel.app" }
+      { name = "Cors__AllowedOrigins__0", value = "https://learn-mate-web.vercel.app" },
+      { name = "Cors__AllowedOrigins__1", value = "http://localhost:5173" }
     ]
 
     ecs_container_health_check = {
