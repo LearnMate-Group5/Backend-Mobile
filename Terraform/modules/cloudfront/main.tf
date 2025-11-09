@@ -1,23 +1,16 @@
-# Origin Request Policy (no Host in CF header list)
+# Origin Request Policy - Forward ALL headers for payment gateway IPN callbacks
 resource "aws_cloudfront_origin_request_policy" "include_cloudfront_headers" {
   name    = "${var.project_name}-cloudfront-headers-policy"
-  comment = "Forward all viewer headers + selected CloudFront headers"
+  comment = "Forward all viewer headers to support payment gateway IPN (MoMo, ZaloPay, etc.)"
 
   cookies_config {
     cookie_behavior = "all"
   }
 
   headers_config {
-    header_behavior = "allViewerAndWhitelistCloudFront"
-    headers {
-      items = [
-        "CloudFront-Forwarded-Proto",
-        "CloudFront-Viewer-Country",
-        "CloudFront-Is-Mobile-Viewer",
-        "CloudFront-Is-Tablet-Viewer",
-        "CloudFront-Is-Desktop-Viewer"
-      ]
-    }
+    # Forward ALL viewer headers (including Content-Type, custom headers from payment gateways)
+    # This is required for MoMo/ZaloPay IPN callbacks to work correctly
+    header_behavior = "allViewer"
   }
 
   query_strings_config {
