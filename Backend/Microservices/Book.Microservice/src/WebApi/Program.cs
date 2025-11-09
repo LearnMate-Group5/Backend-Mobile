@@ -41,6 +41,31 @@ builder.Services.Configure<ForwardedHeadersOptions>(options =>
     options.KnownProxies.Clear();
 });
 
+// CORS Configuration
+const string CorsPolicyName = "AllowFrontend";
+var configuredOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>();
+var allowedCorsOrigins = (configuredOrigins ?? Array.Empty<string>())
+    .Where(origin => !string.IsNullOrWhiteSpace(origin))
+    .Distinct(StringComparer.OrdinalIgnoreCase)
+    .ToArray();
+
+if (allowedCorsOrigins.Length == 0)
+{
+    allowedCorsOrigins = new[] { "http://localhost:5173" };
+}
+
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy(CorsPolicyName, policy =>
+    {
+        policy
+            .WithOrigins(allowedCorsOrigins)
+            .AllowAnyHeader()
+            .AllowAnyMethod()
+            .AllowCredentials();
+    });
+});
+
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
@@ -182,6 +207,9 @@ app.UseSwaggerUI(c =>
     c.SwaggerEndpoint("./v1/swagger.json", "Book Service API V1");
     c.RoutePrefix = "swagger";
 });
+
+// Enable CORS
+app.UseCors(CorsPolicyName);
 
 if (app.Environment.IsDevelopment())
 {
