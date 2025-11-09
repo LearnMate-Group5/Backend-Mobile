@@ -60,7 +60,8 @@ services = {
       { name = "Jwt__Issuer", value = "UserMicroservice" },
       { name = "Jwt__Audience", value = "MicroservicesApp" },
       { name = "Jwt__ExpirationMinutes", value = "60" },
-      { name = "Cors__AllowedOrigins__0", value = "https://learn-mate-web.vercel.app" }
+      { name = "Cors__AllowedOrigins__0", value = "https://learn-mate-web.vercel.app" },
+      { name = "Cors__AllowedOrigins__1", value = "http://localhost:5173" }
     ]
 
 
