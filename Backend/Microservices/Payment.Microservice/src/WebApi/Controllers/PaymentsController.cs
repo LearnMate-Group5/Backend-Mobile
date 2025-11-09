@@ -172,9 +172,10 @@ namespace WebApi.Controllers
         /// <summary>
         /// MoMo IPN (Instant Payment Notification) callback endpoint
         /// This endpoint receives payment notifications from MoMo servers
+        /// MoMo requires HTTP 204 (No Content) response within 15 seconds
         /// </summary>
         /// <param name="ipnRequest">Payment notification from MoMo</param>
-        /// <returns>Acknowledgment response to MoMo</returns>
+        /// <returns>HTTP 204 No Content (as required by MoMo)</returns>
         [HttpPost("momo/ipn")]
         [AllowAnonymousAttribute]
         public async Task<IActionResult> MoMoIpnCallback([FromBody] MoMoIpnRequest ipnRequest)
@@ -184,26 +185,23 @@ namespace WebApi.Controllers
                 _logger.LogInformation("Received MoMo IPN callback for OrderId: {OrderId}, ResultCode: {ResultCode}",
                     ipnRequest.OrderId, ipnRequest.ResultCode);
 
+                // Process IPN asynchronously (but wait for completion to ensure data is saved)
                 var response = await _momoIpnService.ProcessIpnAsync(ipnRequest);
 
-                return Ok(response);
+                _logger.LogInformation("MoMo IPN processed successfully for OrderId: {OrderId}, Response ResultCode: {ResultCode}",
+                    ipnRequest.OrderId, response.ResultCode);
+
+                // MoMo requires HTTP 204 No Content response (no body)
+                // https://developers.momo.vn/v3/docs/payment/api/result-handling/notification/
+                return NoContent();
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error processing MoMo IPN callback for OrderId: {OrderId}", ipnRequest.OrderId);
+                _logger.LogError(ex, "Error processing MoMo IPN callback for OrderId: {OrderId}", ipnRequest?.OrderId ?? "unknown");
 
-                // Return error response to MoMo
-                return Ok(new MoMoIpnResponse
-                {
-                    PartnerCode = ipnRequest.PartnerCode,
-                    OrderId = ipnRequest.OrderId,
-                    RequestId = ipnRequest.RequestId,
-                    ResultCode = 99,
-                    Message = "System error",
-                    ResponseTime = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
-                    ExtraData = "",
-                    Signature = ""
-                });
+                // Even on error, return HTTP 204 to prevent MoMo from retrying
+                // Log the error for manual investigation
+                return NoContent();
             }
         }
 
