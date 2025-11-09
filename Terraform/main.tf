@@ -881,7 +881,7 @@ module "ecs_server2" {
           }
           depends_on = ["user-microservice", "ai-microservice", "payment-microservice"]
         }
-      ]
+      ] 
 
       target_groups = [
         {
