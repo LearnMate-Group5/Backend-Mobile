@@ -27,7 +27,7 @@ resource "aws_cloudfront_origin_request_policy" "include_cloudfront_headers" {
 
 resource "aws_cloudfront_distribution" "alb_distribution" {
   enabled             = true
-  is_ipv6_enabled     = false
+  is_ipv6_enabled     = true
   comment             = "CloudFront distribution for ${var.project_name} ALB with HTTPS"
   price_class         = var.price_class
   http_version        = "http2and3"
@@ -73,6 +73,16 @@ resource "aws_cloudfront_distribution" "alb_distribution" {
   viewer_certificate {
     cloudfront_default_certificate = true
     minimum_protocol_version       = var.viewer_min_protocol_version
+  }
+
+  # CloudFront access logging (optional)
+  dynamic "logging_config" {
+    for_each = var.enable_logging ? [1] : []
+    content {
+      bucket          = "${var.logging_bucket}.s3.amazonaws.com"
+      prefix          = var.logging_prefix
+      include_cookies = var.logging_include_cookies
+    }
   }
 
   tags = {
