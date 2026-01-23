@@ -2,8 +2,8 @@
 
 Microservices backend for a mobile reading and subscription platform.
 
-## Giới thiệu
-Backend cho ứng dụng đọc sách tích hợp AI: dịch sách, chatbot hỏi đáp theo ngữ cảnh, và pipeline n8n/RAG cho text-to-speech, dịch thuật, và AI chatbot.
+## Overview
+Backend for an AI-powered reading app: book translation, context-aware chatbot, and an n8n + RAG pipeline for text-to-speech, translation, and AI chat.
 
 ![.NET](https://img.shields.io/badge/.NET-9.0-512BD4?style=flat)
 ![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?style=flat)
